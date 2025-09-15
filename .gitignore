@@ -41,7 +41,6 @@ yarn-error.log*
 next-env.d.ts
 
 /dist
-/.idea/modules.xml
-/.idea/motion-drawer.iml
-/.idea/vcs.xml
-/.idea/inspectionProfiles/Project_Default.xml
+
+# IDE
+/.idea
