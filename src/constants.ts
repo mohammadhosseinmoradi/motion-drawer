@@ -1,0 +1,1 @@
+export const VELOCITY_MULTIPLIER = 50;
