@@ -6,6 +6,7 @@ import {
   useMemo,
   useReducer,
   useRef,
+  useState,
 } from "react";
 import { DrawerRenderPropArg, SnapPoint } from "@/types";
 import { useRender } from "@/utils/render";
@@ -25,6 +26,8 @@ import { useAnimateOut } from "@/hooks/use-animate-out";
 import { set } from "@/utils/set";
 import { clamp } from "@/utils/clamp";
 import { rubberbandIfOutOfBounds } from "@/utils/rubberband-if-out-of-bounds";
+import useEventListener from "@/hooks/use-event-listener";
+import { useDisposables } from "@/hooks/use-disposables";
 
 const DEFAULT_DRAWER_TAG = "div";
 
@@ -48,6 +51,9 @@ export type DrawerProps<TTag extends ElementType> = Props<
      * @default ["auto"]
      */
     snapPoints?: SnapPoint[];
+    /**
+     * @default auto
+     */
     defaultSnapPoint?: SnapPoint;
     /**
      * The controlled snap point state.
@@ -92,7 +98,7 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
   props: DrawerProps<TTag>,
 ) {
   const {
-    snapPoints = [],
+    snapPoints = ["auto"],
     defaultSnapPoint,
     snapPoint: theirSnapPoint,
     onSnapPointChange: theirOnSnapPointChange,
@@ -113,10 +119,17 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
   const bodyRef = useRef<HTMLElement | null>(null);
   const actionsRef = useRef<HTMLElement | null>(null);
 
+  const ref = useRef<HTMLElement | null>(null);
+  const tracked = useRef({
+    initialSize: null as number | null,
+    isDragging: false,
+    isAnimating: true,
+  });
+
   const [snapPoint, onSnapPointChange] = useControllable(
     theirSnapPoint,
     theirOnSnapPointChange,
-    defaultSnapPoint,
+    defaultSnapPoint || snapPoints?.[0] || "auto",
   );
 
   const [open, onOpenChange] = useControllable(
@@ -125,18 +138,17 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
     defaultOpen,
   );
 
+  const [isDrawerMaxSize, setIsDrawerMaxSize] = useState(false);
   const { maxSize, autoSize } = useSize({
+    drawerRef,
     headerRef,
     bodyRef,
     actionsRef,
     snapPoints,
     offset,
     padding,
+    enable: open,
   });
-
-  const ref = useRef<HTMLElement | null>(null);
-  const initialSizeRef = useRef<number | null>(null);
-  const isDraggingRef = useRef(false);
 
   const getDrawerSize = useCallback(() => {
     const rect = drawerRef.current!.getBoundingClientRect();
@@ -182,12 +194,13 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
   const drag = useDrag(
     {
       onInit() {
-        initialSizeRef.current = getDrawerSize();
-        isDraggingRef.current = true;
+        tracked.current.initialSize = getDrawerSize();
+        tracked.current.isDragging = true;
       },
 
-      onMove({ movement }) {
-        let size = initialSizeRef.current! + -movement[1];
+      onMove({ movement, event }) {
+        if (event.defaultPrevented) return;
+        let size = tracked.current.initialSize! + -movement[1];
         let sizeConstrained = size;
         if (size > maxSize) sizeConstrained = maxSize;
 
@@ -206,14 +219,15 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
         );
       },
 
-      onRelease({ velocity, direction }) {
+      onRelease({ velocity, movement, direction, event }) {
+        if (event.defaultPrevented) return;
         let size = getDrawerSize();
         size += velocity[1] * VELOCITY_MULTIPLIER * -direction[1];
         size = clamp(size, 0, maxSize);
 
         const isPrevSnapPointFirst = snapPoints?.[0] === snapPoint;
         const isBottom = direction[1] > 0;
-        const isFast = velocity[1] > 4;
+        const isFast = velocity[1] > 1 && movement[1] > 50;
         const shouldClose = isPrevSnapPointFirst && isBottom && isFast;
 
         if (shouldClose) {
@@ -232,6 +246,13 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
             onSnapPointChange?.(nearestSnapPoint);
           }
 
+          // We want to set immediately when is false
+          // But set after complete when is true
+          if (size !== maxSize) {
+            setIsDrawerMaxSize(size === maxSize);
+          }
+
+          let isComplete = false;
           animate(
             drawerRef.current!,
             getReleaseKeyframes(size, minSize, maxSize),
@@ -239,12 +260,16 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
               damping: 20,
               stiffness: 100,
               mass: 0.5,
+              onComplete() {
+                if (isComplete) setIsDrawerMaxSize(size === maxSize);
+                isComplete = true;
+              },
             },
           );
         }
 
-        initialSizeRef.current = size;
-        isDraggingRef.current = false;
+        tracked.current.initialSize = size;
+        tracked.current.isDragging = false;
       },
     },
     {
@@ -253,6 +278,25 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
   );
 
   const windowDimensions = useWindowDimensions();
+
+  const resizeDisposables = useDisposables();
+  useEventListener("resize", () => {
+    resizeDisposables.dispose();
+    resizeDisposables.nextFrame(() => {
+      const size = getDrawerSize();
+      const shouldBeSize = resolveSnapPoint(snapPoint, autoSize, maxSize);
+      if (size !== shouldBeSize) {
+        animate(
+          drawerRef.current!,
+          getReleaseKeyframes(shouldBeSize, minSize, maxSize),
+          {
+            duration: 0,
+          },
+        );
+        setIsDrawerMaxSize(shouldBeSize === maxSize);
+      }
+    });
+  });
 
   useBorderRadius({
     elementRef: drawerRef,
@@ -275,6 +319,10 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
     snapPoint: snapPoint || defaultSnapPoint || "auto",
     autoSize,
     maxSize,
+    onAnimateEnd() {
+      const size = getDrawerSize();
+      setIsDrawerMaxSize(size === maxSize);
+    },
     enable: !!autoSize,
   });
 
@@ -312,7 +360,15 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
 
   return (
     <DrawerContext
-      value={{ ...state, drawerRef, headerRef, bodyRef, actionsRef, maxSize }}
+      value={{
+        ...state,
+        drawerRef,
+        headerRef,
+        bodyRef,
+        actionsRef,
+        maxSize,
+        isDrawerMaxSize,
+      }}
     >
       {render({
         ourProps,

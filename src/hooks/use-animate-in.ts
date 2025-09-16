@@ -1,7 +1,8 @@
 import { RefObject, useEffect } from "react";
-import { animate } from "motion";
+import { animate } from "motion/react";
 import { SnapPoint } from "@/types";
 import { resolveSnapPoint } from "@/utils/resolve-snap-point";
+import { set } from "@/utils/set";
 
 type UseAnimateInProps = {
   drawerRef: RefObject<HTMLElement | null>;
@@ -9,11 +10,20 @@ type UseAnimateInProps = {
   snapPoint: SnapPoint;
   autoSize: number;
   maxSize: number;
+  onAnimateEnd: () => void;
   enable: boolean;
 };
 
 export function useAnimateIn(props: UseAnimateInProps) {
-  const { drawerRef, open, snapPoint, autoSize, maxSize, enable } = props;
+  const {
+    drawerRef,
+    open,
+    snapPoint,
+    autoSize,
+    maxSize,
+    onAnimateEnd,
+    enable,
+  } = props;
 
   useEffect(() => {
     if (!enable) return;
@@ -21,8 +31,10 @@ export function useAnimateIn(props: UseAnimateInProps) {
     const drawer = drawerRef.current;
     if (!drawer) return;
     const resolvedSnapPoint = resolveSnapPoint(snapPoint, autoSize, maxSize);
-    drawer.style.setProperty("height", `${resolvedSnapPoint}px`);
-    drawer.style.setProperty("transform", "translateY(100%");
+    set(drawer, {
+      height: `${resolvedSnapPoint}px`,
+      transform: "translateY(100%)",
+    });
     animate(
       drawer,
       {
@@ -31,6 +43,9 @@ export function useAnimateIn(props: UseAnimateInProps) {
       {
         ease: [0.4, 0.2, 0, 1],
         duration: 0.4,
+        onComplete() {
+          onAnimateEnd();
+        },
       },
     );
   }, [enable, open]);

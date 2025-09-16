@@ -44,3 +44,6 @@ next-env.d.ts
 
 # IDE
 /.idea
+
+# turbo
+.turbo

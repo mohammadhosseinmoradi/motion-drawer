@@ -13,6 +13,7 @@ export const DrawerContext = createContext<
       bodyRef: RefObject<HTMLElement | null>;
       actionsRef: RefObject<HTMLElement | null>;
       maxSize: number;
+      isDrawerMaxSize: boolean;
     } & DrawerState &
       DrawerActions)
   | null

@@ -6,6 +6,7 @@
     "type-check": "tsc --noEmit",
     "build": "pnpm type-check && bunchee",
     "dev": "bunchee --watch",
+    "dev-test": "turbo run dev --filter=playground...",
     "format": "prettier --write ."
   },
   "main": "./dist/index.js",
@@ -54,11 +55,11 @@
   },
   "peerDependencies": {
     "react": "^16.8 || ^17.0 || ^18.0 || ^19.0.0 || ^19.0.0-rc",
-    "react-dom": "^16.8 || ^17.0 || ^18.0 || ^19.0.0 || ^19.0.0-rc"
+    "react-dom": "^16.8 || ^17.0 || ^18.0 || ^19.0.0 || ^19.0.0-rc",
+    "motion": "^12"
   },
   "packageManager": "pnpm@10.0.0",
   "dependencies": {
-    "motion": "^12.23.12",
     "clsx": "^2.1.1"
   }
 }

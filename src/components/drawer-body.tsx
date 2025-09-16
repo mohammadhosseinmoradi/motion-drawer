@@ -1,5 +1,12 @@
 import { Props } from "@/utils/render/types";
-import { ElementType, Ref, useCallback, useMemo, useRef } from "react";
+import {
+  ElementType,
+  Ref,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react";
 import { useRender } from "@/utils/render";
 import { DrawerRenderPropArg } from "@/types";
 import { useDrawerContext } from "@/context";
@@ -8,8 +15,9 @@ import { useDrag } from "@/hooks/use-drag";
 import { animate } from "motion/react";
 import { VELOCITY_MULTIPLIER } from "@/constants";
 import { getMaxScrollTop } from "@/utils/get-max-scroll-top";
-import { isDrawerMaxSize } from "@/utils/is-drawer-max-size";
+import { getIsDrawerMaxSize } from "@/utils/get-is-drawer-max-size";
 import { clamp } from "@/utils/clamp";
+import { set } from "@/utils/set";
 
 const DEFAULT_DRAWER_BODY_TAG = "div";
 
@@ -25,13 +33,15 @@ export type DrawerBodyProps<TTag extends ElementType> = Props<
 export function DrawerBody<
   TTag extends ElementType = typeof DEFAULT_DRAWER_BODY_TAG,
 >(props: DrawerBodyProps<TTag>) {
-  const { style, children, ...theirProps } = props;
+  const { ...theirProps } = props;
 
-  const { bodyRef, drawerRef, maxSize } = useDrawerContext();
+  const { bodyRef, drawerRef, maxSize, isDrawerMaxSize } = useDrawerContext();
   const ref = useRef<HTMLElement | null>(null);
-  const initialSizeRef = useRef<number | null>(null);
-  const isScrolledRef = useRef(false);
-  const allowScrollRef = useRef(false);
+  const tracked = useRef({
+    initialScrollTop: null as number | null,
+    isScrolled: false,
+    allowScroll: false,
+  });
 
   const setScrollTop = useCallback((scrollTop: number) => {
     bodyRef.current!.scrollTop = scrollTop;
@@ -39,21 +49,25 @@ export function DrawerBody<
 
   const drag = useDrag({
     onInit() {
-      isScrolledRef.current = false;
-      initialSizeRef.current = bodyRef.current!.scrollTop;
-      allowScrollRef.current = isDrawerMaxSize(drawerRef.current!, maxSize);
+      tracked.current.isScrolled = false;
+      tracked.current.initialScrollTop = bodyRef.current!.scrollTop;
+      tracked.current.allowScroll = getIsDrawerMaxSize(
+        drawerRef.current!,
+        maxSize,
+      );
     },
 
     onMove({ event, movement }) {
-      if (!allowScrollRef.current) return;
-      if (initialSizeRef.current === null) return;
+      if (!tracked.current.allowScroll) return;
+      if (tracked.current.initialScrollTop === null) return;
 
-      const drawerMaxSize = isDrawerMaxSize(drawerRef.current!, maxSize);
-      const scrollTop = initialSizeRef.current + -movement[1];
+      const scrollTop = tracked.current.initialScrollTop + -movement[1];
       const maxScrollTop = getMaxScrollTop(bodyRef.current!);
 
       function scroll() {
-        isScrolledRef.current = true;
+        tracked.current.isScrolled = true;
+        event.stopPropagation();
+        event.preventDefault();
         if (scrollTop <= maxScrollTop + 40 && scrollTop >= -40) {
           setScrollTop(scrollTop);
         } else if (scrollTop > 0) {
@@ -61,26 +75,33 @@ export function DrawerBody<
         } else {
           setScrollTop(0);
         }
-        event.stopPropagation();
-        event.preventDefault();
       }
 
-      if (drawerMaxSize && initialSizeRef.current >= 0 && movement[1] <= 0) {
+      const isDrawerMaxSize = getIsDrawerMaxSize(drawerRef.current!, maxSize);
+
+      // Scroll down
+      if (
+        isDrawerMaxSize &&
+        tracked.current.initialScrollTop >= 0 &&
+        movement[1] <= 0
+      ) {
         scroll();
+        // Scroll up
       } else if (
-        drawerMaxSize &&
-        initialSizeRef.current > 0 &&
+        isDrawerMaxSize &&
+        // Scroll to top only when scrolled
+        tracked.current.initialScrollTop > 0 &&
         movement[1] > 0
       ) {
         scroll();
       } else {
-        isScrolledRef.current = false;
+        tracked.current.isScrolled = false;
       }
     },
 
     onRelease({ velocity, direction }) {
-      if (!allowScrollRef.current) return;
-      if (!isScrolledRef.current) return;
+      if (!tracked.current.allowScroll) return;
+      if (!tracked.current.isScrolled) return;
       const maxScrollTop = getMaxScrollTop(bodyRef.current!);
 
       const fromSize = bodyRef.current!.scrollTop;
@@ -89,7 +110,7 @@ export function DrawerBody<
 
       animate(fromSize, toSize, {
         damping: 10,
-        stiffness: 1,
+        stiffness: 100,
         mass: 1,
         onUpdate: (latest) => {
           bodyRef.current!.scrollTop = latest;
@@ -98,30 +119,38 @@ export function DrawerBody<
     },
   });
 
+  useEffect(() => {
+    set(bodyRef.current, {
+      overflow: isDrawerMaxSize ? "auto" : "hidden",
+    });
+  }, [isDrawerMaxSize]);
+
   const slot = useMemo(() => {
     return {};
   }, []);
 
   const ourProps = {
-    ref: syncRefs(ref, bodyRef, drag.ref),
-    style: {
-      ...style,
-      touchAction: "none",
-      overflow: "auto",
-      flexGrow: 1,
-    },
-    children: (
-      <div>{typeof children === "function" ? children({}) : children}</div>
-    ),
+    ref,
   } as DrawerBodyProps<TTag>;
 
   const render = useRender();
 
-  return render({
-    ourProps,
-    theirProps,
-    slot,
-    name: "DrawerBody",
-    defaultTag: DEFAULT_DRAWER_BODY_TAG,
-  });
+  return (
+    <div
+      ref={syncRefs(bodyRef, drag.ref)}
+      style={{
+        touchAction: "none",
+        overflow: "hidden",
+        flexGrow: 1,
+      }}
+    >
+      {render({
+        ourProps,
+        theirProps,
+        slot,
+        name: "DrawerBody",
+        defaultTag: DEFAULT_DRAWER_BODY_TAG,
+      })}
+    </div>
+  );
 }
