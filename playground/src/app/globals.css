@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+@layer base {
+    *,
+    ::after,
+    ::before,
+    ::backdrop,
+    ::file-selector-button {
+        outline: none;
+        border-color: var(--color-neutral-700);
+    }
+
+    body {
+        @apply bg-neutral-900;
+    }
+}
