@@ -1,5 +1,17 @@
 import { SnapPoint } from "@/types";
-import { resolveSnapPoint } from "@/utils/resolve-snap-point";
+
+export function resolveSnapPoint(
+  snapPoint: SnapPoint,
+  autoSize: number,
+  maxSize: number,
+): number {
+  if (snapPoint === "auto") return autoSize;
+  if (snapPoint.endsWith("px")) return parseInt(snapPoint);
+  if (snapPoint.endsWith("%")) {
+    return Math.round((parseInt(snapPoint) / 100) * maxSize);
+  }
+  return 0;
+}
 
 /**
  * Gets the nearest snap point to the current position.
