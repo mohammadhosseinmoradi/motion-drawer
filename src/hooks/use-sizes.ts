@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { SnapPoint } from "@/types";
-import { resolveSnapPoint } from "@/utils/resolve-snap-point";
 import { useDisposables } from "@/hooks/use-disposables";
+import { resolveSnapPoint } from "@/utils/snap-point";
 
 type UseMaxSizeProps = {
-  drawerRef: React.RefObject<HTMLElement | null>;
   headerRef: React.RefObject<HTMLElement | null>;
   bodyRef: React.RefObject<HTMLElement | null>;
   actionsRef: React.RefObject<HTMLElement | null>;
@@ -14,9 +13,8 @@ type UseMaxSizeProps = {
   enable: boolean;
 };
 
-export function useSize(props: UseMaxSizeProps) {
+export function useSizes(props: UseMaxSizeProps) {
   const {
-    drawerRef,
     headerRef,
     bodyRef,
     actionsRef,
@@ -29,8 +27,8 @@ export function useSize(props: UseMaxSizeProps) {
   const d = useDisposables();
 
   const [sizes, setSizes] = useState({
-    maxSize: 0,
-    autoSize: 0,
+    maxSize: -1,
+    autoSize: -1,
   });
 
   useEffect(() => {
@@ -77,6 +75,8 @@ export function useSize(props: UseMaxSizeProps) {
     if (actionsRef.current) observer.observe(actionsRef.current);
 
     window.addEventListener("resize", calculateSizes);
+
+    calculateSizes();
 
     return () => {
       window.removeEventListener("resize", calculateSizes);

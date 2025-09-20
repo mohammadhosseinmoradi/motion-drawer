@@ -1,10 +1,9 @@
 import { Props } from "@/utils/render/types";
-import {
+import React, {
   ElementType,
   Ref,
   useCallback,
   useMemo,
-  useReducer,
   useRef,
   useState,
 } from "react";
@@ -12,22 +11,20 @@ import { DrawerRenderPropArg, SnapPoint } from "@/types";
 import { useRender } from "@/utils/render";
 import { useDrag } from "@/hooks/use-drag";
 import { syncRefs } from "@/utils/sync-refs";
-import { DrawerContext, stateReducer } from "@/context";
-import { useSize } from "@/hooks/use-size";
+import { DrawerContext } from "@/context";
+import { useSizes } from "@/hooks/use-sizes";
 import { animate, DOMKeyframesDefinition, usePresence } from "motion/react";
 import { VELOCITY_MULTIPLIER } from "@/constants";
 import { useBorderRadius } from "@/hooks/use-border-radius";
 import { useAnimateIn } from "@/hooks/use-animate-in";
-import { useWindowDimensions } from "@/hooks/use-window-dimensions";
-import { getNearestSnapPoint } from "@/utils/get-neareset-snap-point";
 import { useControllable } from "@/hooks/use-controllable";
-import { resolveSnapPoint } from "@/utils/resolve-snap-point";
 import { useAnimateOut } from "@/hooks/use-animate-out";
 import { set } from "@/utils/set";
 import { clamp } from "@/utils/clamp";
 import { rubberbandIfOutOfBounds } from "@/utils/rubberband-if-out-of-bounds";
-import useEventListener from "@/hooks/use-event-listener";
 import { useDisposables } from "@/hooks/use-disposables";
+import { useWindowEvent } from "@/hooks/use-window-event";
+import { getNearestSnapPoint, resolveSnapPoint } from "@/utils/snap-point";
 
 const DEFAULT_DRAWER_TAG = "div";
 
@@ -118,12 +115,12 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
   const headerRef = useRef<HTMLElement | null>(null);
   const bodyRef = useRef<HTMLElement | null>(null);
   const actionsRef = useRef<HTMLElement | null>(null);
+  const [animatedIn, setAnimatedIn] = useState(false);
 
   const ref = useRef<HTMLElement | null>(null);
   const tracked = useRef({
     initialSize: null as number | null,
     isDragging: false,
-    isAnimating: true,
   });
 
   const [snapPoint, onSnapPointChange] = useControllable(
@@ -138,9 +135,7 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
     defaultOpen,
   );
 
-  const [isDrawerMaxSize, setIsDrawerMaxSize] = useState(false);
-  const { maxSize, autoSize } = useSize({
-    drawerRef,
+  const { maxSize, autoSize } = useSizes({
     headerRef,
     bodyRef,
     actionsRef,
@@ -198,8 +193,7 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
         tracked.current.isDragging = true;
       },
 
-      onMove({ movement, event }) {
-        if (event.defaultPrevented) return;
+      onMove({ movement }) {
         let size = tracked.current.initialSize! + -movement[1];
         let sizeConstrained = size;
         if (size > maxSize) sizeConstrained = maxSize;
@@ -220,7 +214,6 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
       },
 
       onRelease({ velocity, movement, direction, event }) {
-        if (event.defaultPrevented) return;
         let size = getDrawerSize();
         size += velocity[1] * VELOCITY_MULTIPLIER * -direction[1];
         size = clamp(size, 0, maxSize);
@@ -246,13 +239,6 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
             onSnapPointChange?.(nearestSnapPoint);
           }
 
-          // We want to set immediately when is false
-          // But set after complete when is true
-          if (size !== maxSize) {
-            setIsDrawerMaxSize(size === maxSize);
-          }
-
-          let isComplete = false;
           animate(
             drawerRef.current!,
             getReleaseKeyframes(size, minSize, maxSize),
@@ -260,10 +246,6 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
               damping: 20,
               stiffness: 100,
               mass: 0.5,
-              onComplete() {
-                if (isComplete) setIsDrawerMaxSize(size === maxSize);
-                isComplete = true;
-              },
             },
           );
         }
@@ -277,10 +259,8 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
     },
   );
 
-  const windowDimensions = useWindowDimensions();
-
   const resizeDisposables = useDisposables();
-  useEventListener("resize", () => {
+  useWindowEvent(animatedIn, "resize", () => {
     resizeDisposables.dispose();
     resizeDisposables.nextFrame(() => {
       const size = getDrawerSize();
@@ -293,16 +273,13 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
             duration: 0,
           },
         );
-        setIsDrawerMaxSize(shouldBeSize === maxSize);
       }
     });
   });
 
   useBorderRadius({
     elementRef: drawerRef,
-    inputRange: windowDimensions?.innerHeight
-      ? [maxSize - 50, maxSize]
-      : [0, 0],
+    inputRange: [maxSize - 50, maxSize],
     outputRange: [borderRadius || 0, 0],
     onChange(radius) {
       set(drawerRef.current, {
@@ -320,10 +297,9 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
     autoSize,
     maxSize,
     onAnimateEnd() {
-      const size = getDrawerSize();
-      setIsDrawerMaxSize(size === maxSize);
+      setAnimatedIn(true);
     },
-    enable: !!autoSize,
+    enable: autoSize > 0,
   });
 
   useAnimateOut({
@@ -333,18 +309,14 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
     },
   });
 
-  const [state] = useReducer(stateReducer, {});
-
   const ourProps = {
     ref: syncRefs(ref, drawerRef, drag.ref),
     style: {
       ...style,
-      touchAction: "none",
       position: "fixed",
       bottom: offset,
       translate: "calc(-1/2 * 100%)",
       left: "calc(1/2 * 100%)",
-      zIndex: 50,
       display: "flex",
       flexDirection: "column",
       overflow: "hidden",
@@ -361,13 +333,11 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
   return (
     <DrawerContext
       value={{
-        ...state,
         drawerRef,
         headerRef,
         bodyRef,
         actionsRef,
         maxSize,
-        isDrawerMaxSize,
       }}
     >
       {render({

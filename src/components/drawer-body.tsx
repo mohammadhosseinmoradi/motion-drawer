@@ -1,12 +1,5 @@
 import { Props } from "@/utils/render/types";
-import {
-  ElementType,
-  Ref,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-} from "react";
+import { ElementType, Ref, useCallback, useMemo, useRef } from "react";
 import { useRender } from "@/utils/render";
 import { DrawerRenderPropArg } from "@/types";
 import { useDrawerContext } from "@/context";
@@ -14,10 +7,7 @@ import { syncRefs } from "@/utils/sync-refs";
 import { useDrag } from "@/hooks/use-drag";
 import { animate } from "motion/react";
 import { VELOCITY_MULTIPLIER } from "@/constants";
-import { getMaxScrollTop } from "@/utils/get-max-scroll-top";
-import { getIsDrawerMaxSize } from "@/utils/get-is-drawer-max-size";
 import { clamp } from "@/utils/clamp";
-import { set } from "@/utils/set";
 
 const DEFAULT_DRAWER_BODY_TAG = "div";
 
@@ -35,7 +25,7 @@ export function DrawerBody<
 >(props: DrawerBodyProps<TTag>) {
   const { ...theirProps } = props;
 
-  const { bodyRef, drawerRef, maxSize, isDrawerMaxSize } = useDrawerContext();
+  const { bodyRef, drawerRef, maxSize } = useDrawerContext();
   const ref = useRef<HTMLElement | null>(null);
   const tracked = useRef({
     initialScrollTop: null as number | null,
@@ -51,10 +41,7 @@ export function DrawerBody<
     onInit() {
       tracked.current.isScrolled = false;
       tracked.current.initialScrollTop = bodyRef.current!.scrollTop;
-      tracked.current.allowScroll = getIsDrawerMaxSize(
-        drawerRef.current!,
-        maxSize,
-      );
+      tracked.current.allowScroll = drawerRef.current!.offsetHeight >= maxSize;
     },
 
     onMove({ event, movement }) {
@@ -62,7 +49,8 @@ export function DrawerBody<
       if (tracked.current.initialScrollTop === null) return;
 
       const scrollTop = tracked.current.initialScrollTop + -movement[1];
-      const maxScrollTop = getMaxScrollTop(bodyRef.current!);
+      const maxScrollTop =
+        bodyRef.current!.scrollHeight - bodyRef.current!.clientHeight;
 
       function scroll() {
         tracked.current.isScrolled = true;
@@ -77,7 +65,7 @@ export function DrawerBody<
         }
       }
 
-      const isDrawerMaxSize = getIsDrawerMaxSize(drawerRef.current!, maxSize);
+      const isDrawerMaxSize = drawerRef.current!.offsetHeight >= maxSize;
 
       // Scroll down
       if (
@@ -102,8 +90,9 @@ export function DrawerBody<
     onRelease({ velocity, direction }) {
       if (!tracked.current.allowScroll) return;
       if (!tracked.current.isScrolled) return;
-      const maxScrollTop = getMaxScrollTop(bodyRef.current!);
 
+      const maxScrollTop =
+        bodyRef.current!.scrollHeight - bodyRef.current!.clientHeight;
       const fromSize = bodyRef.current!.scrollTop;
       let toSize = fromSize + velocity[1] * VELOCITY_MULTIPLIER * -direction[1];
       toSize = clamp(toSize, 0, maxScrollTop);
@@ -119,12 +108,6 @@ export function DrawerBody<
     },
   });
 
-  useEffect(() => {
-    set(bodyRef.current, {
-      overflow: isDrawerMaxSize ? "auto" : "hidden",
-    });
-  }, [isDrawerMaxSize]);
-
   const slot = useMemo(() => {
     return {};
   }, []);
@@ -139,8 +122,7 @@ export function DrawerBody<
     <div
       ref={syncRefs(bodyRef, drag.ref)}
       style={{
-        touchAction: "none",
-        overflow: "hidden",
+        overflowY: "auto",
         flexGrow: 1,
       }}
     >

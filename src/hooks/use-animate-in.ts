@@ -1,8 +1,8 @@
 import { RefObject, useEffect } from "react";
 import { animate } from "motion/react";
 import { SnapPoint } from "@/types";
-import { resolveSnapPoint } from "@/utils/resolve-snap-point";
 import { set } from "@/utils/set";
+import { resolveSnapPoint } from "@/utils/snap-point";
 
 type UseAnimateInProps = {
   drawerRef: RefObject<HTMLElement | null>;
