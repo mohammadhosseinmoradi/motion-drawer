@@ -20,6 +20,8 @@ export function canScrollInDirection(
 
   const computed = window.getComputedStyle(target);
 
+  if (computed.touchAction == "none") return false;
+
   if (dy !== 0) {
     if (computed.overflowY == "hidden") return false;
     // down
