@@ -1,13 +1,18 @@
+import { Vector2d } from "@/types";
 import useEventListener from "@/hooks/use-event-listener";
-import { RefObject, useCallback, useRef } from "react";
-
-export type Vector2d = [number, number];
-
-type Event = TouchEvent | MouseEvent;
+import { RefObject, useRef } from "react";
+import {
+  getDirection,
+  getDistance,
+  getMovement,
+  getPosition,
+  getVelocity,
+  isOverThreshold,
+} from "@/utils/dnd";
+import { usePreventTouchAction } from "@/hooks/use-prevent-touch-action";
 
 export type DragEvent = {
-  event: Event;
-  type: "mouse" | "touch";
+  event: PointerEvent;
   direction: Vector2d;
   timestamp: number;
   movement: Vector2d;
@@ -27,9 +32,19 @@ export type DragConfig = {
 
 export function useDrag(props: DragProps, config?: DragConfig) {
   const { onInit, onMove, onRelease } = props;
-  const { threshold } = config || {};
+  const { threshold = [0, 0] } = config || {};
 
   const ref = useRef<HTMLElement | null>(null);
+
+  const allowPointerEvent = useRef(true);
+
+  usePreventTouchAction({
+    ref,
+    onChange({ defaultPrevented }) {
+      // When touch action is prevented, we need to allow pointer events
+      allowPointerEvent.current = defaultPrevented;
+    },
+  });
 
   const tracked = useRef({
     timestamp: 0,
@@ -51,67 +66,7 @@ export function useDrag(props: DragProps, config?: DragConfig) {
     };
   }
 
-  const getPosition = useCallback((event: Event): Vector2d => {
-    if (isTouchEvent(event)) {
-      return [event.touches[0].clientX, event.touches[0].clientY];
-    }
-    return [event.clientX, event.clientY];
-  }, []);
-
-  const getDirection = useCallback((distance: Vector2d): Vector2d => {
-    const [dx, dy] = distance;
-    const absDx = Math.abs(dx);
-    const absDy = Math.abs(dy);
-
-    if (absDx > absDy) {
-      return dx > 0 ? [-1, 0] : [1, 0];
-    }
-    return dy > 0 ? [0, 1] : [0, -1];
-  }, []);
-
-  const getDistance = useCallback(
-    (position: Vector2d, target: Vector2d): Vector2d => {
-      return [position[0] - target[0], position[1] - target[1]];
-    },
-    [],
-  );
-
-  const getVelocity = useCallback(
-    (distance: Vector2d, deltaTime: number): Vector2d => {
-      return [
-        Math.abs(distance[0] / deltaTime),
-        Math.abs(distance[1] / deltaTime),
-      ];
-    },
-    [],
-  );
-
-  const getMovement = useCallback(
-    (position: Vector2d, initialPosition: Vector2d): Vector2d => {
-      return [
-        position[0] - initialPosition[0],
-        position[1] - initialPosition[1],
-      ];
-    },
-    [],
-  );
-
-  const getThreshold = useCallback((): Vector2d => {
-    if (threshold) return threshold;
-    return [0, 0];
-  }, [threshold]);
-
-  const isOverThreshold = useCallback(
-    (movement: Vector2d, threshold: Vector2d): boolean => {
-      return (
-        Math.abs(movement[0]) > threshold[0] ||
-        Math.abs(movement[1]) > threshold[1]
-      );
-    },
-    [],
-  );
-
-  function handleStart(event: Event) {
+  function handleStart(event: PointerEvent) {
     const timestamp = Date.now();
     const position = getPosition(event);
 
@@ -126,7 +81,6 @@ export function useDrag(props: DragProps, config?: DragConfig) {
 
     onInit?.({
       event,
-      type: isTouchEvent(event) ? "touch" : "mouse",
       direction: [0, 0],
       timestamp,
       movement: [0, 0],
@@ -134,8 +88,10 @@ export function useDrag(props: DragProps, config?: DragConfig) {
       velocity: [0, 0],
     });
   }
-  function handleMove(event: Event) {
+  function handleMove(event: PointerEvent) {
+    if (!allowPointerEvent.current) return;
     if (!tracked.current.initialPosition) return;
+    (event.target as HTMLElement).setPointerCapture(event.pointerId);
 
     const timestamp = Date.now();
     const deltaTime = timestamp - tracked.current.timestamp;
@@ -144,7 +100,7 @@ export function useDrag(props: DragProps, config?: DragConfig) {
     let velocity = getVelocity(distance, deltaTime);
     const movement = getMovement(position, tracked.current.initialPosition);
     const activated =
-      tracked.current.activated || isOverThreshold(movement, getThreshold());
+      tracked.current.activated || isOverThreshold(movement, threshold);
 
     tracked.current = {
       ...tracked.current,
@@ -159,7 +115,6 @@ export function useDrag(props: DragProps, config?: DragConfig) {
 
     onMove?.({
       event,
-      type: isTouchEvent(event) ? "touch" : "mouse",
       direction: getDirection(distance),
       timestamp,
       movement: getMovement(position, tracked.current.initialPosition!),
@@ -167,11 +122,13 @@ export function useDrag(props: DragProps, config?: DragConfig) {
       velocity,
     });
   }
-  function handleEnd(event: Event) {
+  function handleEnd(event: PointerEvent) {
+    if (!allowPointerEvent.current) return;
     if (!tracked.current.initialPosition || !tracked.current.activated) {
       resetTracked();
       return;
     }
+    (event.target as HTMLElement).releasePointerCapture(event.pointerId);
 
     const timestamp = tracked.current.timestamp;
     const position = tracked.current.position;
@@ -180,7 +137,6 @@ export function useDrag(props: DragProps, config?: DragConfig) {
 
     onRelease?.({
       event,
-      type: isTouchEvent(event) ? "touch" : "mouse",
       direction: getDirection(distance),
       timestamp,
       movement: getMovement(position, tracked.current.initialPosition),
@@ -191,18 +147,19 @@ export function useDrag(props: DragProps, config?: DragConfig) {
     resetTracked();
   }
 
-  useEventListener("touchstart", handleStart, ref as RefObject<HTMLElement>);
-  useEventListener("touchmove", handleMove, ref as RefObject<HTMLElement>);
-  useEventListener("touchend", handleEnd, ref as RefObject<HTMLElement>);
+  function handleCancel(event: PointerEvent) {
+    (event.target as HTMLElement).releasePointerCapture(event.pointerId);
+    resetTracked();
+  }
 
-  // Only register mousedown on target
-  useEventListener("mousedown", handleStart, ref as RefObject<HTMLElement>);
-  useEventListener("mousemove", handleMove);
-  useEventListener("mouseup", handleEnd);
+  useEventListener("pointerdown", handleStart, ref as RefObject<HTMLElement>);
+  useEventListener("pointermove", handleMove, ref as RefObject<HTMLElement>);
+  useEventListener("pointerup", handleEnd, ref as RefObject<HTMLElement>);
+  useEventListener(
+    "pointercancel",
+    handleCancel,
+    ref as RefObject<HTMLElement>,
+  );
 
   return { ref };
-}
-
-function isTouchEvent(event: Event): event is TouchEvent {
-  return (event as TouchEvent).touches !== undefined;
 }
