@@ -166,7 +166,6 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
     [],
   );
 
-  const isAnimatingOut = useRef(false);
   const animateOut = useCallback(
     (
       size: number,
@@ -174,18 +173,12 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
       maxSize: number,
       onComplete: () => void,
     ) => {
-      // Prevent continuing if another animate out is running
-      if (isAnimatingOut.current) return;
-      isAnimatingOut.current = true;
       let isComplete = false;
       animate(drawerRef.current!, getReleaseKeyframes(size, minSize, maxSize), {
         ease: [0.6, 0.4, 0, 1],
         duration: 0.3,
         onComplete() {
-          if (isComplete) {
-            onComplete?.();
-            isAnimatingOut.current = false;
-          }
+          if (isComplete) onComplete();
           isComplete = true;
         },
       });
@@ -232,9 +225,6 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
 
         if (shouldClose) {
           onOpenChange?.(false);
-          animateOut(0, minSize, maxSize, () => {
-            safeToRemove?.();
-          });
         } else {
           if (snapPoints.length > 0) {
             const nearestSnapPoint = getNearestSnapPoint(
