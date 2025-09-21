@@ -38,13 +38,13 @@ export function canScrollInDirection(
     if (computed.overflowX == "hidden") return false;
     // right
     if (dx > 0) {
-      if (target.scrollLeft > 0) return true;
-      // left
-    } else {
       if (
         Math.ceil(target.scrollLeft + target.clientWidth) < target.scrollWidth
       )
         return true;
+      // left
+    } else {
+      if (target.scrollLeft > 0) return true;
     }
   }
 
