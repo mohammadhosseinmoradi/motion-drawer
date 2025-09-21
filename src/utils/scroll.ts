@@ -18,27 +18,39 @@ export function canScrollInDirection(
 
   const [dx, dy] = dir;
 
+  const computed = window.getComputedStyle(target);
+
   if (dy !== 0) {
+    if (computed.overflowY == "hidden") return false;
     // down
     if (dy > 0) {
       if (target.scrollTop > 0) return true;
     } else {
       // down
-      if (Math.ceil(target.scrollTop + target.clientHeight) < target.scrollHeight) return true;
+      if (
+        Math.ceil(target.scrollTop + target.clientHeight) < target.scrollHeight
+      )
+        return true;
     }
   }
 
   if (dx !== 0) {
+    if (computed.overflowX == "hidden") return false;
     // right
     if (dx > 0) {
       if (target.scrollLeft > 0) return true;
       // left
     } else {
-      if (Math.ceil(target.scrollLeft + target.clientWidth) < target.scrollWidth) return true;
+      if (
+        Math.ceil(target.scrollLeft + target.clientWidth) < target.scrollWidth
+      )
+        return true;
     }
   }
 
   if (root && target === root) return false;
 
-  return target.parentElement ? canScrollInDirection(target.parentElement, root, dir) : false;
+  return target.parentElement
+    ? canScrollInDirection(target.parentElement, root, dir)
+    : false;
 }
