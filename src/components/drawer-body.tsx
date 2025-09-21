@@ -129,7 +129,7 @@ export function DrawerBody<
       style={{
         position: "relative",
         touchAction: "none",
-        overflowY: "hidden",
+        overflowY: "auto",
         flexGrow: 1,
       }}
     >
