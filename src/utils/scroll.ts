@@ -1,40 +1,44 @@
 import { Vector2d } from "@/types";
 
 /**
- * Recursively checks if an element or any of its ancestors can scroll in the given dir.
+ * Recursively checks if a target or any of its ancestors can scroll in the given dir.
  *
- * @param el - The element to start from.
- * @param dir - A 2D vector [x, y]:
+ * @param target - The starting element to check.
+ * @param root - The root element to stop checking at.
+ * @param dir - A 2D vector [x, y] representing a scroll direction:
  *   [0,1] = down, [0,-1] = up, [1,0] = right, [-1,0] = left.
- * @returns true if any ancestor (including el) can scroll in that dir.
+ * @returns true if target or any ancestor up to root can scroll in the given direction.
  */
 export function canScrollInDirection(
-  el: HTMLElement | null,
+  target: HTMLElement,
+  root: HTMLElement | null,
   dir: Vector2d,
 ): boolean {
-  if (!el) return false;
+  if (!target) return false;
 
   const [dx, dy] = dir;
 
   if (dy !== 0) {
+    // down
     if (dy > 0) {
-      if (el.scrollTop + el.clientHeight < el.scrollHeight) return true; // down
+      if (target.scrollTop > 0) return true;
     } else {
-      if (el.scrollTop > 0) return true; // up
+      // down
+      if (Math.ceil(target.scrollTop + target.clientHeight) < target.scrollHeight) return true;
     }
   }
 
   if (dx !== 0) {
+    // right
     if (dx > 0) {
-      if (el.scrollLeft + el.clientWidth < el.scrollWidth) return true; // right
+      if (target.scrollLeft > 0) return true;
+      // left
     } else {
-      if (el.scrollLeft > 0) return true; // left
+      if (Math.ceil(target.scrollLeft + target.clientWidth) < target.scrollWidth) return true;
     }
   }
 
-  return el.parentElement ? canScrollInDirection(el.parentElement, dir) : false;
-}
+  if (root && target === root) return false;
 
-export function getMaxScrollTop(element: HTMLElement) {
-  return element.scrollHeight - element.clientHeight;
+  return target.parentElement ? canScrollInDirection(target.parentElement, root, dir) : false;
 }
