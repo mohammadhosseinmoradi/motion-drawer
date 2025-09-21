@@ -4,7 +4,7 @@ A headless drawer with smooth animations, easily integrable with any headless li
 
 ## Usage
 
-To start using the library, install it in your project:,
+To start using the library, install it in your project:
 
 ```bash
 pnpm add motion-drawer
