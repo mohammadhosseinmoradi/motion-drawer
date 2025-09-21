@@ -54,9 +54,6 @@ importers:
       '@headlessui/react':
         specifier: ^2.2.8
         version: 2.2.8(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
-      '@use-gesture/react':
-        specifier: ^10.3.1
-        version: 10.3.1(react@19.1.0)
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
@@ -79,6 +76,9 @@ importers:
       '@eslint/eslintrc':
         specifier: ^3
         version: 3.3.1
+      '@next/eslint-plugin-next':
+        specifier: ^15.5.3
+        version: 15.5.3
       '@tailwindcss/postcss':
         specifier: ^4
         version: 4.1.13
@@ -97,6 +97,15 @@ importers:
       eslint-config-next:
         specifier: 15.5.3
         version: 15.5.3(eslint@9.35.0(jiti@2.5.1))(typescript@5.9.2)
+      eslint-config-prettier:
+        specifier: ^10.1.8
+        version: 10.1.8(eslint@9.35.0(jiti@2.5.1))
+      eslint-plugin-react:
+        specifier: ^7.37.5
+        version: 7.37.5(eslint@9.35.0(jiti@2.5.1))
+      eslint-plugin-react-hooks:
+        specifier: ^5.2.0
+        version: 5.2.0(eslint@9.35.0(jiti@2.5.1))
       prettier:
         specifier: ^3.6.2
         version: 3.6.2
@@ -993,14 +1002,6 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@use-gesture/core@10.3.1':
-    resolution: {integrity: sha512-WcINiDt8WjqBdUXye25anHiNxPc0VOrlT8F6LLkU6cycrOGUDyY/yyFmsg3k8i5OLvv25llc0QC45GhR/C8llw==}
-
-  '@use-gesture/react@10.3.1':
-    resolution: {integrity: sha512-Yy19y6O2GJq8f7CHf7L0nxL8bf4PZCPaVOCgJrusOeFHY1LvHgYXnmnXg6N5iwAnbgbZCDjo60SiM6IPJi9C5g==}
-    peerDependencies:
-      react: '>= 16.8.0'
-
   acorn-jsx@5.3.2:
     resolution: {integrity: sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==}
     peerDependencies:
@@ -1308,6 +1309,12 @@ packages:
     peerDependenciesMeta:
       typescript:
         optional: true
+
+  eslint-config-prettier@10.1.8:
+    resolution: {integrity: sha512-82GZUjRS0p/jganf6q1rEO25VSoHH0hKPCTrgillPjdI/3bgBhAE1QzHrHTizjpRvy6pGAvKjDJtk2pF9NDq8w==}
+    hasBin: true
+    peerDependencies:
+      eslint: '>=7.0.0'
 
   eslint-import-resolver-node@0.3.9:
     resolution: {integrity: sha512-WFj2isz22JahUv+B788TlO3N6zL3nNJGU8CcZbPZvVEkBPaJdCV4vy5wyghty5ROFbCRnm132v8BScu5/1BQ8g==}
@@ -3245,13 +3252,6 @@ snapshots:
   '@unrs/resolver-binding-win32-x64-msvc@1.11.1':
     optional: true
 
-  '@use-gesture/core@10.3.1': {}
-
-  '@use-gesture/react@10.3.1(react@19.1.0)':
-    dependencies:
-      '@use-gesture/core': 10.3.1
-      react: 19.1.0
-
   acorn-jsx@5.3.2(acorn@8.15.0):
     dependencies:
       acorn: 8.15.0
@@ -3667,6 +3667,10 @@ snapshots:
       - eslint-import-resolver-webpack
       - eslint-plugin-import-x
       - supports-color
+
+  eslint-config-prettier@10.1.8(eslint@9.35.0(jiti@2.5.1)):
+    dependencies:
+      eslint: 9.35.0(jiti@2.5.1)
 
   eslint-import-resolver-node@0.3.9:
     dependencies:
