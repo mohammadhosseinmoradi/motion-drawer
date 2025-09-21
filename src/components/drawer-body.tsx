@@ -1,11 +1,11 @@
 import { Props } from "@/utils/render/types";
-import { ElementType, Ref, useCallback, useMemo, useRef } from "react";
+import { ElementType, Ref, useEffect, useMemo, useRef } from "react";
 import { useRender } from "@/utils/render";
 import { DrawerRenderPropArg } from "@/types";
 import { useDrawerContext } from "@/context";
 import { syncRefs } from "@/utils/sync-refs";
 import { useDrag } from "@/hooks/use-drag";
-import { animate } from "motion/react";
+import { animate, useMotionValue, useMotionValueEvent } from "motion/react";
 import { VELOCITY_MULTIPLIER } from "@/constants";
 import { clamp } from "@/utils/clamp";
 
@@ -33,9 +33,7 @@ export function DrawerBody<
     allowScroll: false,
   });
 
-  const setScrollTop = useCallback((scrollTop: number) => {
-    bodyRef.current!.scrollTop = scrollTop;
-  }, []);
+  const motionScrollTop = useMotionValue(bodyRef.current?.scrollTop || 0);
 
   const drag = useDrag({
     onInit() {
@@ -55,13 +53,12 @@ export function DrawerBody<
       function scroll() {
         tracked.current.isScrolled = true;
         event.stopPropagation();
-        event.preventDefault();
         if (scrollTop <= maxScrollTop + 40 && scrollTop >= -40) {
-          setScrollTop(scrollTop);
+          motionScrollTop.set(scrollTop);
         } else if (scrollTop > 0) {
-          setScrollTop(maxScrollTop);
+          motionScrollTop.set(maxScrollTop);
         } else {
-          setScrollTop(0);
+          motionScrollTop.set(0);
         }
       }
 
@@ -108,6 +105,14 @@ export function DrawerBody<
     },
   });
 
+  useEffect(() => {
+    motionScrollTop.set(bodyRef.current!.scrollTop);
+  }, []);
+
+  useMotionValueEvent(motionScrollTop, "change", (scrollTop) => {
+    bodyRef.current!.scrollTop = scrollTop;
+  });
+
   const slot = useMemo(() => {
     return {};
   }, []);
@@ -122,7 +127,9 @@ export function DrawerBody<
     <div
       ref={syncRefs(bodyRef, drag.ref)}
       style={{
-        overflowY: "auto",
+        position: "relative",
+        touchAction: "none",
+        overflowY: "hidden",
         flexGrow: 1,
       }}
     >
