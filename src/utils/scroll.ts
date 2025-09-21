@@ -36,15 +36,15 @@ export function canScrollInDirection(
 
   if (dx !== 0) {
     if (computed.overflowX == "hidden") return false;
+    const scrollLeft = Math.abs(target.scrollLeft);
+    const rtlFactor = computed.direction == "rtl" ? -1 : 1;
     // right
-    if (dx > 0) {
-      if (
-        Math.ceil(target.scrollLeft + target.clientWidth) < target.scrollWidth
-      )
+    if (dx * rtlFactor > 0) {
+      if (Math.ceil(scrollLeft + target.clientWidth) < target.scrollWidth)
         return true;
       // left
     } else {
-      if (target.scrollLeft > 0) return true;
+      if (scrollLeft > 0) return true;
     }
   }
 
