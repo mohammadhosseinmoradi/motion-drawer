@@ -1,7 +1,9 @@
 # Motion Drawer
 
-A headless drawer with smooth animations, easily integrable with any headless library.
-
+A headless drawer with smooth animations and easily integrates with any headless
+libraries such as [Headless UI](https://headlessui.com),
+[React Aria](https://react-spectrum.adobe.com/react-aria/),
+[Radix UI](https://radix-ui.com), and more.
 ## Usage
 
 To start using the library, install it in your project:
@@ -96,4 +98,4 @@ function MyComponent() {
 
 ## Documentation
 
-Find the full API reference and examples in the [documentation]().
+Find the full API reference and examples in the [documentation](https://motion-drawer.vercel.app).
