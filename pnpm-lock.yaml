@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
       motion:
         specifier: ^12
         version: 12.23.13(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
