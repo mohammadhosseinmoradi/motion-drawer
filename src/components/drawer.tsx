@@ -48,9 +48,6 @@ export type DrawerProps<TTag extends ElementType> = Props<
      * @default ["auto"]
      */
     snapPoints?: SnapPoint[];
-    /**
-     * @default auto
-     */
     defaultSnapPoint?: SnapPoint;
     /**
      * The controlled snap point state.
@@ -66,7 +63,7 @@ export type DrawerProps<TTag extends ElementType> = Props<
     /**
      * The border radius of the drawer.
      *
-     * @default 16px
+     * @default 16
      */
     borderRadius?: number | null;
     /**
@@ -213,15 +210,23 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
         );
       },
 
-      onRelease({ velocity, movement, direction, event }) {
+      onRelease({ velocity, movement, direction, prevTimestamp, timestamp }) {
         let size = getDrawerSize();
         size += velocity[1] * VELOCITY_MULTIPLIER * -direction[1];
         size = clamp(size, 0, maxSize);
 
         const isPrevSnapPointFirst = snapPoints?.[0] === snapPoint;
         const isBottom = direction[1] > 0;
-        const isFast = velocity[1] > 1 && movement[1] > 50;
-        const shouldClose = isPrevSnapPointFirst && isBottom && isFast;
+        const isFast = velocity[1] > 0.1;
+        const isMovedEnough = movement[1] > 50;
+        const isPaused = timestamp - prevTimestamp > 200;
+
+        const shouldClose =
+          isPrevSnapPointFirst &&
+          isBottom &&
+          isFast &&
+          isMovedEnough &&
+          !isPaused;
 
         if (shouldClose) {
           onOpenChange?.(false);
