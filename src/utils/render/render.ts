@@ -13,7 +13,7 @@ import {
 } from "react";
 import type { Expand, Props } from "./types";
 import { match } from "@/utils/match";
-import classNames from "clsx";
+import { classNames } from '@/utils/class-names'
 
 export enum RenderFeatures {
   /** No features at all */
