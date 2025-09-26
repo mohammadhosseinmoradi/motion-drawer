@@ -3,7 +3,7 @@
   "version": "0.4.2",
   "description": "A headless drawer with smooth animations, easily integrable with any headless library.",
   "scripts": {
-    "type-check": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
     "build": "pnpm type-check && bunchee",
     "dev": "bunchee --watch",
     "dev-test": "turbo run dev --filter=playground...",
