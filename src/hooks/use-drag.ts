@@ -14,6 +14,7 @@ import { usePreventTouchAction } from "@/hooks/use-prevent-touch-action";
 export type DragEvent = {
   event: PointerEvent;
   direction: Vector2d;
+  prevTimestamp: number;
   timestamp: number;
   movement: Vector2d;
   distance: Vector2d;
@@ -47,6 +48,7 @@ export function useDrag(props: DragProps, config?: DragConfig) {
   });
 
   const tracked = useRef({
+    prevTimestamp: 0,
     timestamp: 0,
     initialPosition: null as Vector2d | null,
     position: [0, 0] as Vector2d,
@@ -57,6 +59,7 @@ export function useDrag(props: DragProps, config?: DragConfig) {
 
   function resetTracked() {
     tracked.current = {
+      prevTimestamp: 0,
       timestamp: 0,
       initialPosition: null as Vector2d | null,
       position: [0, 0] as Vector2d,
@@ -73,6 +76,7 @@ export function useDrag(props: DragProps, config?: DragConfig) {
     tracked.current = {
       initialPosition: position,
       position,
+      prevTimestamp: timestamp,
       timestamp,
       distance: [0, 0],
       velocity: [0, 0],
@@ -82,6 +86,7 @@ export function useDrag(props: DragProps, config?: DragConfig) {
     onInit?.({
       event,
       direction: [0, 0],
+      prevTimestamp: timestamp,
       timestamp,
       movement: [0, 0],
       distance: [0, 0],
@@ -93,8 +98,9 @@ export function useDrag(props: DragProps, config?: DragConfig) {
     if (!tracked.current.initialPosition) return;
     (event.target as HTMLElement).setPointerCapture(event.pointerId);
 
+    const prevTimestamp = tracked.current.timestamp;
     const timestamp = Date.now();
-    const deltaTime = timestamp - tracked.current.timestamp;
+    const deltaTime = timestamp - prevTimestamp;
     const position = getPosition(event);
     const distance = getDistance(position, tracked.current.position);
     let velocity = getVelocity(distance, deltaTime);
@@ -105,6 +111,7 @@ export function useDrag(props: DragProps, config?: DragConfig) {
     tracked.current = {
       ...tracked.current,
       position,
+      prevTimestamp,
       timestamp,
       distance,
       velocity,
@@ -116,6 +123,7 @@ export function useDrag(props: DragProps, config?: DragConfig) {
     onMove?.({
       event,
       direction: getDirection(distance),
+      prevTimestamp,
       timestamp,
       movement: getMovement(position, tracked.current.initialPosition!),
       distance,
@@ -130,7 +138,8 @@ export function useDrag(props: DragProps, config?: DragConfig) {
     }
     (event.target as HTMLElement).releasePointerCapture(event.pointerId);
 
-    const timestamp = tracked.current.timestamp;
+    const prevTimestamp = tracked.current.prevTimestamp;
+    const timestamp = Date.now();
     const position = tracked.current.position;
     const distance = tracked.current.distance;
     const velocity = tracked.current.velocity;
@@ -138,6 +147,7 @@ export function useDrag(props: DragProps, config?: DragConfig) {
     onRelease?.({
       event,
       direction: getDirection(distance),
+      prevTimestamp,
       timestamp,
       movement: getMovement(position, tracked.current.initialPosition),
       distance,
