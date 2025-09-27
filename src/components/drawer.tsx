@@ -226,7 +226,6 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
         size += velocity[1] * VELOCITY_MULTIPLIER * -direction[1];
         size = clamp(size, 0, maxSize);
 
-        // If all conditions are true should close the drawer
         const isPrevSnapPointFirst = snapPoints?.[0] === snapPoint;
         const isBottom = direction[1] > 0;
         const isFast = velocity[1] > 0.1;
