@@ -3,6 +3,7 @@ import React, {
   ElementType,
   Ref,
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -85,6 +86,15 @@ export type DrawerProps<TTag extends ElementType> = Props<
      * @default 0
      */
     minSize?: number;
+    /**
+     * Whether to close the drawer when dragging.
+     *
+     * `true`, the drawer will close when dragging down from the first snap point.
+     * `false`, the drawer will close when dragging down.
+     *
+     * @default false
+     */
+    closeFromFirstSnapPoint?: boolean;
   }
 >;
 
@@ -104,6 +114,7 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
     offset = 0,
     padding = 0,
     minSize = 0,
+    closeFromFirstSnapPoint = false,
     ...theirProps
   } = props;
 
@@ -215,18 +226,28 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
         size += velocity[1] * VELOCITY_MULTIPLIER * -direction[1];
         size = clamp(size, 0, maxSize);
 
+        // If all conditions are true should close the drawer
         const isPrevSnapPointFirst = snapPoints?.[0] === snapPoint;
         const isBottom = direction[1] > 0;
         const isFast = velocity[1] > 0.1;
         const isMovedEnough = movement[1] > 50;
         const isPaused = timestamp - prevTimestamp > 200;
+        const closePoint = "0px";
+        const isNearestClosePoint =
+          getNearestSnapPoint(
+            [closePoint, snapPoints[0]],
+            size,
+            autoSize,
+            maxSize,
+          ) === closePoint;
 
         const shouldClose =
-          isPrevSnapPointFirst &&
+          (closeFromFirstSnapPoint ? isPrevSnapPointFirst : true) &&
           isBottom &&
           isFast &&
           isMovedEnough &&
-          !isPaused;
+          !isPaused &&
+          isNearestClosePoint;
 
         if (shouldClose) {
           onOpenChange?.(false);
@@ -253,7 +274,6 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
           );
         }
 
-        tracked.current.initialSize = size;
         tracked.current.isDragging = false;
       },
     },
@@ -311,6 +331,16 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
       animateOut(0, minSize, maxSize, () => safeToRemove?.());
     },
   });
+
+  useEffect(() => {
+    if (!snapPoints?.length) {
+      const error = new Error(
+        "The snapPoints array must contain at least one snap point value.",
+      );
+      if (Error.captureStackTrace) Error.captureStackTrace(error, Drawer);
+      throw error;
+    }
+  }, [snapPoints]);
 
   const ourProps = {
     ref: syncRefs(ref, drawerRef, drag.ref),
