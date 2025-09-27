@@ -33,6 +33,7 @@
     "motion-drawer"
   ],
   "author": "Mohammad Hossein Moradi <mhmdev64@gmail.com>",
+  "homepage": "http://motion-drawer.vercel.app",
   "repository": {
     "type": "git",
     "url": "https://github.com/mohammadhosseinmoradi/motion-drawer.git"
