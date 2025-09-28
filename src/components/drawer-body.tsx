@@ -121,7 +121,7 @@ export function DrawerBody<
       releaseAnimationControl.current = animate(fromSize, toSizeClamped, {
         type: "spring",
         damping: 100,
-        stiffness: clamp(450 * clamp(velocity[1], 1, 20), 100, 1000),
+        stiffness: clamp(450 * clamp(velocity[1], 4, 20), 100, 1200),
         mass: mass,
         onUpdate: (latest) => {
           motionScrollTop.set(latest);
@@ -149,7 +149,7 @@ export function DrawerBody<
 
     set(bodyChild, {
       "transform-origin": transformOrigin,
-      transform: `scaleY(${1 + overflow * 0.001})`,
+      transform: `scaleY(${1 + overflow * 0.0015})`,
     });
 
     bodyRef.current!.scrollTop = clamp(scrollTop, 0, maxScrollTop);

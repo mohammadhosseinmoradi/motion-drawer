@@ -280,7 +280,7 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
             {
               type: "spring",
               damping: 100,
-              stiffness: 1200,
+              stiffness: 1000,
               mass: 1,
             },
           );
