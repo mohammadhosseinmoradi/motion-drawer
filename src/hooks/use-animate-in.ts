@@ -41,8 +41,10 @@ export function useAnimateIn(props: UseAnimateInProps) {
         y: 0,
       },
       {
-        ease: [0.4, 0.2, 0, 1],
-        duration: 0.4,
+        type: "spring",
+        damping: 100,
+        stiffness: 1200,
+        mass: 1,
         onComplete() {
           onAnimateEnd();
         },

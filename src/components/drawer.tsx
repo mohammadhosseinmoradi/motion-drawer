@@ -14,7 +14,12 @@ import { useDrag } from "@/hooks/use-drag";
 import { syncRefs } from "@/utils/sync-refs";
 import { DrawerContext } from "@/context";
 import { useSizes } from "@/hooks/use-sizes";
-import { animate, DOMKeyframesDefinition, usePresence } from "motion/react";
+import {
+  animate,
+  DOMKeyframesDefinition,
+  usePresence,
+  AnimationPlaybackControlsWithThen,
+} from "motion/react";
 import { VELOCITY_MULTIPLIER } from "@/constants";
 import { useBorderRadius } from "@/hooks/use-border-radius";
 import { useAnimateIn } from "@/hooks/use-animate-in";
@@ -130,6 +135,8 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
     initialSize: null as number | null,
     isDragging: false,
   });
+  const releaseAnimationControl =
+    useRef<AnimationPlaybackControlsWithThen | null>(null);
 
   const [snapPoint, onSnapPointChange] = useControllable(
     theirSnapPoint,
@@ -183,8 +190,10 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
     ) => {
       let isComplete = false;
       animate(drawerRef.current!, getReleaseKeyframes(size, minSize, maxSize), {
-        ease: [0.6, 0.4, 0, 1],
-        duration: 0.3,
+        type: "spring",
+        damping: 100,
+        stiffness: 1200,
+        mass: 1,
         onComplete() {
           if (isComplete) onComplete();
           isComplete = true;
@@ -197,6 +206,9 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
   const drag = useDrag(
     {
       onInit() {
+        if (releaseAnimationControl.current) {
+          releaseAnimationControl.current.stop();
+        }
         tracked.current.initialSize = getDrawerSize();
         tracked.current.isDragging = true;
       },
@@ -262,13 +274,14 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
             onSnapPointChange?.(nearestSnapPoint);
           }
 
-          animate(
+          releaseAnimationControl.current = animate(
             drawerRef.current!,
             getReleaseKeyframes(size, minSize, maxSize),
             {
-              damping: 20,
-              stiffness: 100,
-              mass: 0.5,
+              type: "spring",
+              damping: 100,
+              stiffness: 1200,
+              mass: 1,
             },
           );
         }
