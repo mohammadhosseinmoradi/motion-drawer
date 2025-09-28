@@ -14,8 +14,8 @@ import {
 import { VELOCITY_MULTIPLIER } from "@/constants";
 import { clamp } from "@/utils/clamp";
 import { set } from "@/utils/set";
-import { rubberbandIfOutOfBounds } from "@/utils/rubberband-if-out-of-bounds";
 import { getMaxScrollTop } from "@/utils/scroll";
+import { ValueAnimationTransition } from "motion";
 
 const DEFAULT_DRAWER_BODY_TAG = "div";
 
@@ -68,9 +68,7 @@ export function DrawerBody<
       if (!tracked.current.allowScroll) return;
       if (tracked.current.initialScrollTop === null) return;
 
-      const maxScrollTop = getMaxScrollTop(bodyRef.current!);
       let scrollTop = tracked.current.initialScrollTop + -movement[1];
-      scrollTop = rubberbandIfOutOfBounds(scrollTop, 0, maxScrollTop);
 
       function scroll() {
         tracked.current.isScrolled = true;
@@ -104,27 +102,56 @@ export function DrawerBody<
       if (!tracked.current.allowScroll) return;
       if (!tracked.current.isScrolled) return;
       if (!bodyRef.current) return;
+      if (tracked.current.initialScrollTop === null) return;
 
       const maxScrollTop = getMaxScrollTop(bodyRef.current);
       const fromSize = motionScrollTop.get();
+      const fromSizeClamped = clamp(fromSize, 0, maxScrollTop);
       const toSize =
-        fromSize + velocity[1] * VELOCITY_MULTIPLIER * 2 * -direction[1];
+        fromSize + velocity[1] * VELOCITY_MULTIPLIER * 2.5 * -direction[1];
       const toSizeClamped = clamp(toSize, 0, maxScrollTop);
 
-      // If toSize is out of bounds, use a greater mass
-      const mass =
-        (toSize < 0 && fromSize >= 0) ||
-        (toSize > maxScrollTop && fromSize <= maxScrollTop)
-          ? 4
-          : 1;
+      const isFromSizeOutOfBounds = fromSize !== fromSizeClamped;
+      const isToSizeOutOfBounds = toSize !== toSizeClamped;
 
-      releaseAnimationControl.current = animate(fromSize, toSizeClamped, {
+      const outOptions: ValueAnimationTransition<number> = {
         type: "spring",
         damping: 100,
-        stiffness: clamp(450 * clamp(velocity[1], 4, 20), 100, 1200),
-        mass: mass,
+        stiffness: 600,
+        mass: 1,
         onUpdate: (latest) => {
           motionScrollTop.set(latest);
+        },
+      };
+
+      if (isFromSizeOutOfBounds) {
+        releaseAnimationControl.current = animate(
+          fromSize,
+          toSizeClamped,
+          outOptions,
+        );
+        return;
+      }
+
+      const overflow = Math.abs(toSize) - Math.abs(toSizeClamped);
+
+      releaseAnimationControl.current = animate(fromSize, toSize, {
+        type: "spring",
+        damping: 100,
+        stiffness: clamp(250 * velocity[1], 0, 1000),
+        mass: 1,
+        onUpdate: (latest) => {
+          motionScrollTop.set(latest);
+          if (!isToSizeOutOfBounds) return;
+          // Back to toSizeClamped
+          if (Math.abs(latest) >= Math.abs(toSizeClamped) + overflow / 2) {
+            releaseAnimationControl.current?.stop();
+            releaseAnimationControl.current = animate(
+              latest,
+              toSizeClamped,
+              outOptions,
+            );
+          }
         },
       });
     },
@@ -149,7 +176,7 @@ export function DrawerBody<
 
     set(bodyChild, {
       "transform-origin": transformOrigin,
-      transform: `scaleY(${1 + overflow * 0.0015})`,
+      transform: `scaleY(${1 + overflow * 0.0001})`,
     });
 
     bodyRef.current!.scrollTop = clamp(scrollTop, 0, maxScrollTop);
