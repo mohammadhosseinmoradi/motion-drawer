@@ -108,7 +108,7 @@ export function DrawerBody<
       const fromSize = motionScrollTop.get();
       const fromSizeClamped = clamp(fromSize, 0, maxScrollTop);
       const toSize =
-        fromSize + velocity[1] * VELOCITY_MULTIPLIER * 2.5 * -direction[1];
+        fromSize + velocity[1] * VELOCITY_MULTIPLIER * 2 * -direction[1];
       const toSizeClamped = clamp(toSize, 0, maxScrollTop);
 
       const isFromSizeOutOfBounds = fromSize !== fromSizeClamped;
@@ -144,7 +144,10 @@ export function DrawerBody<
           motionScrollTop.set(latest);
           if (!isToSizeOutOfBounds) return;
           // Back to toSizeClamped
-          if (Math.abs(latest) >= Math.abs(toSizeClamped) + overflow / 2) {
+          if (
+            Math.abs(latest) >=
+            Math.abs(toSizeClamped) + clamp(overflow / 2, 0, 256)
+          ) {
             releaseAnimationControl.current?.stop();
             releaseAnimationControl.current = animate(
               latest,
