@@ -28,7 +28,7 @@ export function canScrollInDirection(
     if (dy > 0) {
       if (target.scrollTop > 0) return true;
     } else {
-      // down
+      // up
       if (
         Math.ceil(target.scrollTop + target.clientHeight) < target.scrollHeight
       )
