@@ -1,6 +1,6 @@
 {
   "name": "motion-drawer",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "A headless drawer with smooth animations, easily integrable with any headless library.",
   "scripts": {
     "typecheck": "tsc --noEmit",
