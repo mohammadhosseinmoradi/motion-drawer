@@ -56,3 +56,7 @@ export function canScrollInDirection(
     ? canScrollInDirection(target.parentElement, root, dir)
     : false;
 }
+
+export function getMaxScrollTop(element: HTMLElement) {
+  return element.scrollHeight - element.clientHeight;
+}
