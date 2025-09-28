@@ -93,6 +93,7 @@ export function useDrag(props: DragProps, config?: DragConfig) {
       velocity: [0, 0],
     });
   }
+
   function handleMove(event: PointerEvent) {
     if (!allowPointerEvent.current) return;
     if (!tracked.current.initialPosition) return;
@@ -130,6 +131,7 @@ export function useDrag(props: DragProps, config?: DragConfig) {
       velocity,
     });
   }
+
   function handleEnd(event: PointerEvent) {
     if (!allowPointerEvent.current) return;
     if (!tracked.current.initialPosition || !tracked.current.activated) {
@@ -140,9 +142,10 @@ export function useDrag(props: DragProps, config?: DragConfig) {
 
     const prevTimestamp = tracked.current.prevTimestamp;
     const timestamp = Date.now();
+    const deltaTime = timestamp - prevTimestamp;
     const position = tracked.current.position;
     const distance = tracked.current.distance;
-    const velocity = tracked.current.velocity;
+    const velocity = getVelocity(distance, deltaTime);
 
     onRelease?.({
       event,
