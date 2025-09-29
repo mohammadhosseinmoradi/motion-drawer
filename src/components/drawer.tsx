@@ -206,9 +206,6 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
   const drag = useDrag(
     {
       onInit() {
-        if (releaseAnimationControl.current) {
-          releaseAnimationControl.current.stop();
-        }
         tracked.current.initialSize = getDrawerSize();
         tracked.current.isDragging = true;
       },
@@ -217,6 +214,11 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
         let size = tracked.current.initialSize! + -movement[1];
         let sizeConstrained = size;
         if (size > maxSize) sizeConstrained = maxSize;
+
+        if (releaseAnimationControl.current) {
+          releaseAnimationControl.current.stop();
+          releaseAnimationControl.current = null;
+        }
 
         animate(
           drawerRef.current!,
