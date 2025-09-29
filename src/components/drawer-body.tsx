@@ -108,7 +108,7 @@ export function DrawerBody<
       const fromSize = motionScrollTop.get();
       const fromSizeClamped = clamp(fromSize, 0, maxScrollTop);
       const toSize =
-        fromSize + velocity[1] * VELOCITY_MULTIPLIER * 2 * -direction[1];
+        fromSize + velocity[1] * VELOCITY_MULTIPLIER * -direction[1];
       const toSizeClamped = clamp(toSize, 0, maxScrollTop);
 
       const isFromSizeOutOfBounds = fromSize !== fromSizeClamped;
@@ -117,7 +117,7 @@ export function DrawerBody<
       const outOptions: ValueAnimationTransition<number> = {
         type: "spring",
         damping: 100,
-        stiffness: 600,
+        stiffness: 1000,
         mass: 1,
         onUpdate: (latest) => {
           motionScrollTop.set(latest);
@@ -138,7 +138,7 @@ export function DrawerBody<
       releaseAnimationControl.current = animate(fromSize, toSize, {
         type: "spring",
         damping: 100,
-        stiffness: clamp(250 * velocity[1], 0, 1000),
+        stiffness: 1000,
         mass: 1,
         onUpdate: (latest) => {
           motionScrollTop.set(latest);
