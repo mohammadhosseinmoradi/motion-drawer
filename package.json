@@ -34,6 +34,7 @@
   ],
   "author": "Mohammad Hossein Moradi <mhmdev64@gmail.com>",
   "homepage": "https://motion-drawer.vercel.app",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/mohammadhosseinmoradi/motion-drawer.git"
