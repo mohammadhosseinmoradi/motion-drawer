@@ -54,67 +54,57 @@ const comments = [
     id: 1,
     author: "Sarah Wilson",
     content: "Love the new updates! The animations are so smooth 🚀",
-    avatar: "/path-to-avatar-1.jpg",
   },
   {
     id: 2,
     author: "Mike Johnson",
     content:
       "Great work on this! Looking forward to using it in my next project 👍",
-    avatar: "/path-to-avatar-2.jpg",
   },
   {
     id: 3,
     author: "Emily Chen",
     content: "The integration with other libraries is seamless! Well done 🎉",
-    avatar: "/path-to-avatar-3.jpg",
   },
   {
     id: 4,
     author: "David Rodriguez",
     content:
       "The documentation is super clear and helpful. Makes implementation a breeze 📚",
-    avatar: "/path-to-avatar-4.jpg",
   },
   {
     id: 5,
     author: "Alex Thompson",
     content:
       "Been using this in production for a month now. Rock solid performance! 💪",
-    avatar: "/path-to-avatar-5.jpg",
   },
   {
     id: 6,
     author: "Lisa Park",
     content: "The customization options are exactly what I needed. Thanks! ✨",
-    avatar: "/path-to-avatar-6.jpg",
   },
   {
     id: 7,
     author: "Chris Martinez",
     content:
       "Responsive design works perfectly across all devices. Great job! 📱",
-    avatar: "/path-to-avatar-7.jpg",
   },
   {
     id: 8,
     author: "Sophie Anderson",
     content: "The spring animations make the interactions feel so natural 🌟",
-    avatar: "/path-to-avatar-8.jpg",
   },
   {
     id: 9,
     author: "James Lee",
     content:
       "Best drawer implementation I've used so far. Keep up the good work! 🏆",
-    avatar: "/path-to-avatar-9.jpg",
   },
   {
     id: 10,
     author: "Nina Patel",
     content:
       "Love how lightweight it is while still maintaining all the features 🎯",
-    avatar: "/path-to-avatar-10.jpg",
   },
 ];
 
@@ -242,67 +232,57 @@ const comments = [
     id: 1,
     author: "Sarah Wilson",
     content: "Love the new updates! The animations are so smooth 🚀",
-    avatar: "/path-to-avatar-1.jpg",
   },
   {
     id: 2,
     author: "Mike Johnson",
     content:
       "Great work on this! Looking forward to using it in my next project 👍",
-    avatar: "/path-to-avatar-2.jpg",
   },
   {
     id: 3,
     author: "Emily Chen",
     content: "The integration with other libraries is seamless! Well done 🎉",
-    avatar: "/path-to-avatar-3.jpg",
   },
   {
     id: 4,
     author: "David Rodriguez",
     content:
       "The documentation is super clear and helpful. Makes implementation a breeze 📚",
-    avatar: "/path-to-avatar-4.jpg",
   },
   {
     id: 5,
     author: "Alex Thompson",
     content:
       "Been using this in production for a month now. Rock solid performance! 💪",
-    avatar: "/path-to-avatar-5.jpg",
   },
   {
     id: 6,
     author: "Lisa Park",
     content: "The customization options are exactly what I needed. Thanks! ✨",
-    avatar: "/path-to-avatar-6.jpg",
   },
   {
     id: 7,
     author: "Chris Martinez",
     content:
       "Responsive design works perfectly across all devices. Great job! 📱",
-    avatar: "/path-to-avatar-7.jpg",
   },
   {
     id: 8,
     author: "Sophie Anderson",
     content: "The spring animations make the interactions feel so natural 🌟",
-    avatar: "/path-to-avatar-8.jpg",
   },
   {
     id: 9,
     author: "James Lee",
     content:
       "Best drawer implementation I've used so far. Keep up the good work! 🏆",
-    avatar: "/path-to-avatar-9.jpg",
   },
   {
     id: 10,
     author: "Nina Patel",
     content:
       "Love how lightweight it is while still maintaining all the features 🎯",
-    avatar: "/path-to-avatar-10.jpg",
   },
 ];
 
@@ -441,67 +421,57 @@ const comments = [
     id: 1,
     author: "Sarah Wilson",
     content: "Love the new updates! The animations are so smooth 🚀",
-    avatar: "/path-to-avatar-1.jpg",
   },
   {
     id: 2,
     author: "Mike Johnson",
     content:
       "Great work on this! Looking forward to using it in my next project 👍",
-    avatar: "/path-to-avatar-2.jpg",
   },
   {
     id: 3,
     author: "Emily Chen",
     content: "The integration with other libraries is seamless! Well done 🎉",
-    avatar: "/path-to-avatar-3.jpg",
   },
   {
     id: 4,
     author: "David Rodriguez",
     content:
       "The documentation is super clear and helpful. Makes implementation a breeze 📚",
-    avatar: "/path-to-avatar-4.jpg",
   },
   {
     id: 5,
     author: "Alex Thompson",
     content:
       "Been using this in production for a month now. Rock solid performance! 💪",
-    avatar: "/path-to-avatar-5.jpg",
   },
   {
     id: 6,
     author: "Lisa Park",
     content: "The customization options are exactly what I needed. Thanks! ✨",
-    avatar: "/path-to-avatar-6.jpg",
   },
   {
     id: 7,
     author: "Chris Martinez",
     content:
       "Responsive design works perfectly across all devices. Great job! 📱",
-    avatar: "/path-to-avatar-7.jpg",
   },
   {
     id: 8,
     author: "Sophie Anderson",
     content: "The spring animations make the interactions feel so natural 🌟",
-    avatar: "/path-to-avatar-8.jpg",
   },
   {
     id: 9,
     author: "James Lee",
     content:
       "Best drawer implementation I've used so far. Keep up the good work! 🏆",
-    avatar: "/path-to-avatar-9.jpg",
   },
   {
     id: 10,
     author: "Nina Patel",
     content:
       "Love how lightweight it is while still maintaining all the features 🎯",
-    avatar: "/path-to-avatar-10.jpg",
   },
 ];
 
