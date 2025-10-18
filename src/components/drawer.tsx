@@ -151,6 +151,7 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
   );
 
   const { maxSize, autoSize } = useSizes({
+    drawerRef,
     headerRef,
     bodyRef,
     actionsRef,
@@ -165,7 +166,7 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
     return rect.height;
   }, []);
 
-  const getReleaseKeyframes = useCallback(
+  const getKeyframes = useCallback(
     (
       size: number,
       minSize: number,
@@ -189,7 +190,7 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
       onComplete: () => void,
     ) => {
       let isComplete = false;
-      animate(drawerRef.current!, getReleaseKeyframes(size, minSize, maxSize), {
+      animate(drawerRef.current!, getKeyframes(size, minSize, maxSize), {
         type: "spring",
         damping: 100,
         stiffness: 1200,
@@ -227,6 +228,7 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
             height: rubberbandIfOutOfBounds(size, minSize, maxSize),
             // Animate y if size is less than minSize
             y: -(sizeConstrained < minSize ? sizeConstrained - minSize : 0),
+            maxHeight: "unset",
           },
           {
             ease: "linear",
@@ -265,25 +267,44 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
         if (shouldClose) {
           onOpenChange?.(false);
         } else {
-          if (snapPoints.length > 0) {
-            const nearestSnapPoint = getNearestSnapPoint(
-              snapPoints,
-              size,
-              autoSize,
-              maxSize,
-            );
-            size = resolveSnapPoint(nearestSnapPoint, autoSize, maxSize);
-            onSnapPointChange?.(nearestSnapPoint);
-          }
+          const nearestSnapPoint = getNearestSnapPoint(
+            snapPoints,
+            size,
+            autoSize,
+            maxSize,
+          );
+          size = resolveSnapPoint(nearestSnapPoint, autoSize, maxSize);
+          onSnapPointChange?.(nearestSnapPoint);
 
+          let isCompleted = false;
           releaseAnimationControl.current = animate(
             drawerRef.current!,
-            getReleaseKeyframes(size, minSize, maxSize),
+            {
+              ...(nearestSnapPoint === "auto" && autoSize < maxSize
+                ? {
+                    height: "auto",
+                    y: 0,
+                    maxHeight: maxSize + "px",
+                  }
+                : getKeyframes(size, minSize, maxSize)),
+            },
             {
               type: "spring",
               damping: 100,
               stiffness: 1000,
               mass: 1,
+              onComplete() {
+                if (!isCompleted) {
+                  isCompleted = true;
+                  return;
+                }
+                if (nearestSnapPoint === "auto") {
+                  set(drawerRef.current, {
+                    height: "auto",
+                    "max-height": maxSize + "px",
+                  });
+                }
+              },
             },
           );
         }
@@ -305,7 +326,7 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
       if (size !== shouldBeSize) {
         animate(
           drawerRef.current!,
-          getReleaseKeyframes(shouldBeSize, minSize, maxSize),
+          getKeyframes(shouldBeSize, minSize, maxSize),
           {
             duration: 0,
           },

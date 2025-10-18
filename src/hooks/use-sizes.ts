@@ -4,6 +4,7 @@ import { useDisposables } from "@/hooks/use-disposables";
 import { resolveSnapPoint } from "@/utils/snap-point";
 
 type UseMaxSizeProps = {
+  drawerRef: React.RefObject<HTMLElement | null>;
   headerRef: React.RefObject<HTMLElement | null>;
   bodyRef: React.RefObject<HTMLElement | null>;
   actionsRef: React.RefObject<HTMLElement | null>;
@@ -15,6 +16,7 @@ type UseMaxSizeProps = {
 
 export function useSizes(props: UseMaxSizeProps) {
   const {
+    drawerRef,
     headerRef,
     bodyRef,
     actionsRef,
@@ -39,8 +41,10 @@ export function useSizes(props: UseMaxSizeProps) {
       d.nextFrame(() => {
         const headerSize = headerRef.current?.offsetHeight || 0;
         const actionsSize = actionsRef.current?.offsetHeight || 0;
+        const drawerCS = window.getComputedStyle(drawerRef.current!);
+        const drawerBorder = parseFloat(drawerCS.borderWidth);
 
-        let autoSize = headerSize + actionsSize;
+        let autoSize = headerSize + actionsSize + drawerBorder;
         if (bodyRef.current?.children) {
           Array.from(bodyRef.current.children).forEach((child) => {
             const childHeight = (child as HTMLElement).offsetHeight;
@@ -48,10 +52,7 @@ export function useSizes(props: UseMaxSizeProps) {
           });
         }
 
-        autoSize = Math.min(
-          autoSize + 4,
-          window.innerHeight - offset - padding,
-        );
+        autoSize = Math.min(autoSize, window.innerHeight - offset - padding);
 
         let maxSize = Math.max(autoSize, window.innerHeight - offset - padding);
         snapPoints.forEach((current) => {
