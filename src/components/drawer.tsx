@@ -1,5 +1,6 @@
 import { Props } from "@/utils/render/types";
 import React, {
+  CSSProperties,
   ElementType,
   Ref,
   useCallback,
@@ -8,7 +9,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { DrawerRenderPropArg, SnapPoint } from "@/types";
+import { Direction, DrawerRenderPropArg, SnapPoint } from "@/types";
 import { useRender } from "@/utils/render";
 import { useDrag } from "@/hooks/use-drag";
 import { syncRefs } from "@/utils/sync-refs";
@@ -31,6 +32,8 @@ import { rubberbandIfOutOfBounds } from "@/utils/rubberband-if-out-of-bounds";
 import { useDisposables } from "@/hooks/use-disposables";
 import { useWindowEvent } from "@/hooks/use-window-event";
 import { getNearestSnapPoint, resolveSnapPoint } from "@/utils/snap-point";
+import { match } from "@/utils/match";
+import { getAxis } from "@/utils/get-axis";
 
 const DEFAULT_DRAWER_TAG = "div";
 
@@ -85,13 +88,6 @@ export type DrawerProps<TTag extends ElementType> = Props<
      */
     padding?: number;
     /**
-     * The minimum size of the drawer.
-     * When dragging, the drawer cannot be smaller than this value.
-     *
-     * @default 0
-     */
-    minSize?: number;
-    /**
      * Whether to close the drawer when dragging.
      *
      * `true`, the drawer will close when dragging down from the first snap point.
@@ -100,6 +96,12 @@ export type DrawerProps<TTag extends ElementType> = Props<
      * @default false
      */
     closeFromFirstSnapPoint?: boolean;
+    /**
+     * Direction of the drawer. This adjusts the animations and the drag direction.
+     *
+     * @default bottom
+     */
+    direction?: Direction;
   }
 >;
 
@@ -118,8 +120,8 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
     style,
     offset = 0,
     padding = 0,
-    minSize = 0,
     closeFromFirstSnapPoint = false,
+    direction = "bottom",
     ...theirProps
   } = props;
 
@@ -150,6 +152,40 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
     defaultOpen,
   );
 
+  const getDrawerMinSize = useCallback((): number => {
+    const drawer = drawerRef.current!;
+    const computedStyle = window.getComputedStyle(drawer);
+    const axis = getAxis(direction);
+
+    const clone = drawer.cloneNode(true) as HTMLElement;
+    const cstyle = clone.style;
+
+    cstyle.position = "absolute";
+    cstyle.visibility = "hidden";
+    cstyle.pointerEvents = "none";
+    cstyle.contain = "layout";
+    cstyle.boxSizing = computedStyle.boxSizing as any;
+
+    if (axis === "y") {
+      cstyle.width = computedStyle.width;
+      cstyle.minHeight = "0";
+      cstyle.height = snapPoints[0];
+    } else {
+      cstyle.height = snapPoints[0];
+      cstyle.minWidth = "0";
+      cstyle.width = computedStyle.minWidth;
+    }
+
+    document.body.appendChild(clone);
+    const rect = clone.getBoundingClientRect();
+    clone.remove();
+
+    return match(axis, {
+      x: () => rect.width,
+      y: () => rect.height,
+    });
+  }, [direction, snapPoints]);
+
   const { maxSize, autoSize } = useSizes({
     headerRef,
     bodyRef,
@@ -157,28 +193,63 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
     snapPoints,
     offset,
     padding,
+    direction,
     enable: open,
   });
 
-  const getDrawerSize = useCallback(() => {
+  const getDrawerSize = useCallback((direction: Direction) => {
+    const axis = getAxis(direction);
     const rect = drawerRef.current!.getBoundingClientRect();
-    return rect.height;
+    return match(axis, {
+      x: rect.width,
+      y: rect.height,
+    });
   }, []);
 
-  const getReleaseKeyframes = useCallback(
+  const getKeyframes = useCallback(
     (
       size: number,
       minSize: number,
       maxSize: number,
     ): DOMKeyframesDefinition => {
-      return {
-        // Animate height until minSize
-        height: rubberbandIfOutOfBounds(size, minSize, maxSize),
-        // Animate y if size is less than minSize
-        y: -(size < minSize ? size - minSize : 0),
-      };
+      return match(getAxis(direction), {
+        x: () => {
+          const x = clamp(
+            rubberbandIfOutOfBounds(size - minSize, -minSize, 0),
+            -minSize,
+            offset ? Infinity : 0,
+          );
+          if (direction === "left") {
+            return {
+              x,
+            } as DOMKeyframesDefinition;
+          } else {
+            return {
+              x: -x,
+            } as DOMKeyframesDefinition;
+          }
+        },
+        y: () => {
+          if (direction === "top") {
+            const y = clamp(
+              rubberbandIfOutOfBounds(size - minSize, -minSize, minSize),
+              -Infinity,
+              offset ? Infinity : 0,
+            );
+            return {
+              y,
+            } as DOMKeyframesDefinition;
+          } else {
+            const sizeClamped = clamp(size, 0, maxSize);
+            return {
+              height: rubberbandIfOutOfBounds(size, minSize, maxSize),
+              y: -(sizeClamped < minSize ? sizeClamped - minSize : 0),
+            } as DOMKeyframesDefinition;
+          }
+        },
+      });
     },
-    [],
+    [direction, offset],
   );
 
   const animateOut = useCallback(
@@ -189,7 +260,7 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
       onComplete: () => void,
     ) => {
       let isComplete = false;
-      animate(drawerRef.current!, getReleaseKeyframes(size, minSize, maxSize), {
+      animate(drawerRef.current!, getKeyframes(size, minSize, maxSize), {
         type: "spring",
         damping: 100,
         stiffness: 1200,
@@ -206,14 +277,18 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
   const drag = useDrag(
     {
       onInit() {
-        tracked.current.initialSize = getDrawerSize();
+        tracked.current.initialSize = getDrawerSize(direction);
         tracked.current.isDragging = true;
       },
 
       onMove({ movement }) {
-        let size = tracked.current.initialSize! + -movement[1];
-        let sizeConstrained = size;
-        if (size > maxSize) sizeConstrained = maxSize;
+        let size = tracked.current.initialSize!;
+        size += match(direction, {
+          top: movement[1],
+          right: -movement[0],
+          bottom: -movement[1],
+          left: movement[0],
+        });
 
         if (releaseAnimationControl.current) {
           releaseAnimationControl.current.stop();
@@ -222,12 +297,7 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
 
         animate(
           drawerRef.current!,
-          {
-            // Animate height until minSize
-            height: rubberbandIfOutOfBounds(size, minSize, maxSize),
-            // Animate y if size is less than minSize
-            y: -(sizeConstrained < minSize ? sizeConstrained - minSize : 0),
-          },
+          getKeyframes(size, getDrawerMinSize(), maxSize),
           {
             ease: "linear",
             duration: 0,
@@ -235,13 +305,19 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
         );
       },
 
-      onRelease({ velocity, movement, direction, prevTimestamp, timestamp }) {
-        let size = getDrawerSize();
-        size += velocity[1] * VELOCITY_MULTIPLIER * -direction[1];
+      onRelease({
+        velocity,
+        movement,
+        direction: movDir,
+        prevTimestamp,
+        timestamp,
+      }) {
+        let size = getDrawerSize(direction);
+        size += velocity[1] * VELOCITY_MULTIPLIER * -movDir[1];
         size = clamp(size, 0, maxSize);
 
         const isPrevSnapPointFirst = snapPoints?.[0] === snapPoint;
-        const isBottom = direction[1] > 0;
+        const isBottom = movDir[1] > 0;
         const isFast = velocity[1] > 0.1;
         const isMovedEnough = movement[1] > 50;
         const isPaused = timestamp - prevTimestamp > 200;
@@ -265,25 +341,36 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
         if (shouldClose) {
           onOpenChange?.(false);
         } else {
-          if (snapPoints.length > 0) {
-            const nearestSnapPoint = getNearestSnapPoint(
-              snapPoints,
-              size,
-              autoSize,
-              maxSize,
-            );
-            size = resolveSnapPoint(nearestSnapPoint, autoSize, maxSize);
-            onSnapPointChange?.(nearestSnapPoint);
-          }
+          const nearestSnapPoint = getNearestSnapPoint(
+            snapPoints,
+            size,
+            autoSize,
+            maxSize,
+          );
+          size = resolveSnapPoint(nearestSnapPoint, autoSize, maxSize);
+          onSnapPointChange?.(nearestSnapPoint);
 
+          let isCompleted = false;
           releaseAnimationControl.current = animate(
             drawerRef.current!,
-            getReleaseKeyframes(size, minSize, maxSize),
+            getKeyframes(size, getDrawerMinSize(), maxSize),
             {
               type: "spring",
               damping: 100,
               stiffness: 1000,
               mass: 1,
+              onComplete() {
+                if (!isCompleted) {
+                  isCompleted = true;
+                  return;
+                }
+                if (direction === "bottom" && nearestSnapPoint === "auto") {
+                  set(drawerRef.current, {
+                    height: "auto",
+                    "max-height": "100vh",
+                  });
+                }
+              },
             },
           );
         }
@@ -300,12 +387,12 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
   useWindowEvent(animatedIn, "resize", () => {
     resizeDisposables.dispose();
     resizeDisposables.nextFrame(() => {
-      const size = getDrawerSize();
+      const size = getDrawerSize(direction);
       const shouldBeSize = resolveSnapPoint(snapPoint, autoSize, maxSize);
       if (size !== shouldBeSize) {
         animate(
           drawerRef.current!,
-          getReleaseKeyframes(shouldBeSize, minSize, maxSize),
+          getKeyframes(shouldBeSize, getDrawerMinSize(), maxSize),
           {
             duration: 0,
           },
@@ -316,13 +403,31 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
 
   useBorderRadius({
     elementRef: drawerRef,
+    direction,
     inputRange: [maxSize - 50, maxSize],
     outputRange: [borderRadius || 0, 0],
     onChange(radius) {
-      set(drawerRef.current, {
-        "border-top-left-radius": radius + "px",
-        "border-top-right-radius": radius + "px",
-      });
+      set(
+        drawerRef.current,
+        match(direction, {
+          top: {
+            "border-bottom-left-radius": radius + "px",
+            "border-bottom-right-radius": radius + "px",
+          },
+          bottom: {
+            "border-top-left-radius": radius + "px",
+            "border-top-right-radius": radius + "px",
+          },
+          left: {
+            "border-top-right-radius": radius + "px",
+            "border-bottom-right-radius": radius + "px",
+          },
+          right: {
+            "border-top-left-radius": radius + "px",
+            "border-bottom-left-radius": radius + "px",
+          },
+        }),
+      );
     },
     enable: borderRadius !== null,
   });
@@ -333,6 +438,7 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
     snapPoint: snapPoint || defaultSnapPoint || "auto",
     autoSize,
     maxSize,
+    direction,
     onAnimateEnd() {
       setAnimatedIn(true);
     },
@@ -342,7 +448,7 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
   useAnimateOut({
     isClose: !open || !isPresent,
     onClose() {
-      animateOut(0, minSize, maxSize, () => safeToRemove?.());
+      animateOut(0, getDrawerMinSize(), maxSize, () => safeToRemove?.());
     },
   });
 
@@ -356,18 +462,48 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
     }
   }, [snapPoints]);
 
+  const directionStyles = useMemo<CSSProperties>(
+    () =>
+      match(direction, {
+        top: {
+          top: offset,
+          translate: "calc(-1/2 * 100%)",
+          left: "calc(1/2 * 100%)",
+          height: "0px",
+        },
+        right: {
+          right: offset,
+          translate: "0 calc(-1/2 * 100%)",
+          transform: "translateX(100%)",
+          top: "calc(1/2 * 100%)",
+          width: "0px",
+        },
+        bottom: {
+          bottom: offset,
+          translate: "calc(-1/2 * 100%)",
+          left: "calc(1/2 * 100%)",
+          height: "0px",
+        },
+        left: {
+          left: offset,
+          translate: "0 calc(-1/2 * 100%)",
+          transform: "translateX(-100%)",
+          top: "calc(1/2 * 100%)",
+          width: "0px",
+        },
+      }),
+    [direction, offset],
+  );
+
   const ourProps = {
     ref: syncRefs(ref, drawerRef, drag.ref),
     style: {
       ...style,
       position: "fixed",
-      bottom: offset,
-      translate: "calc(-1/2 * 100%)",
-      left: "calc(1/2 * 100%)",
       display: "flex",
       flexDirection: "column",
       overflow: "hidden",
-      height: "0px",
+      ...directionStyles,
     },
   } as DrawerProps<TTag>;
 
@@ -385,6 +521,7 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
         bodyRef,
         actionsRef,
         maxSize,
+        direction,
       }}
     >
       {render({

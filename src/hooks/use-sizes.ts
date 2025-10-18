@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
-import { SnapPoint } from "@/types";
+import { Direction, SnapPoint } from "@/types";
 import { useDisposables } from "@/hooks/use-disposables";
 import { resolveSnapPoint } from "@/utils/snap-point";
+import { getAxis } from "@/utils/get-axis";
+import { match } from "@/utils/match";
 
 type UseMaxSizeProps = {
   headerRef: React.RefObject<HTMLElement | null>;
@@ -10,6 +12,7 @@ type UseMaxSizeProps = {
   snapPoints: SnapPoint[];
   offset: number;
   padding: number;
+  direction: Direction;
   enable: boolean;
 };
 
@@ -21,6 +24,7 @@ export function useSizes(props: UseMaxSizeProps) {
     snapPoints,
     offset,
     padding,
+    direction,
     enable,
   } = props;
 
@@ -37,23 +41,45 @@ export function useSizes(props: UseMaxSizeProps) {
     const calculateSizes = () => {
       d.dispose();
       d.nextFrame(() => {
-        const headerSize = headerRef.current?.offsetHeight || 0;
-        const actionsSize = actionsRef.current?.offsetHeight || 0;
+        const axis = getAxis(direction);
 
-        let autoSize = headerSize + actionsSize;
-        if (bodyRef.current?.children) {
-          Array.from(bodyRef.current.children).forEach((child) => {
-            const childHeight = (child as HTMLElement).offsetHeight;
-            autoSize += childHeight;
-          });
-        }
+        const headerSize = match(axis, {
+          x: 0,
+          y: headerRef.current?.offsetHeight || 0,
+        });
+
+        const actionsSize = match(axis, {
+          x: 0,
+          y: actionsRef.current?.offsetHeight || 0,
+        });
+
+        const bodySize = match(axis, {
+          x: () => {
+            const childHeight = bodyRef.current!.children[0] as HTMLElement;
+            return childHeight.offsetWidth;
+          },
+          y: () => {
+            const childHeight = bodyRef.current!.children[0] as HTMLElement;
+            return childHeight.offsetHeight;
+          },
+        });
+
+        let autoSize = match(axis, {
+          x: () => Math.max(headerSize, actionsSize, bodySize),
+          y: () => headerSize + actionsSize + bodySize,
+        });
+
+        const windowBounds = match(axis, {
+          x: window.innerWidth - offset - padding,
+          y: window.innerHeight - offset - padding,
+        });
 
         autoSize = Math.min(
-          autoSize + 4,
-          window.innerHeight - offset - padding,
+          autoSize,
+          windowBounds,
         );
 
-        let maxSize = Math.max(autoSize, window.innerHeight - offset - padding);
+        let maxSize = Math.max(autoSize, windowBounds);
         snapPoints.forEach((current) => {
           const resolved = resolveSnapPoint(current, autoSize, maxSize);
           if (resolved > maxSize) maxSize = resolved;
@@ -82,7 +108,7 @@ export function useSizes(props: UseMaxSizeProps) {
       window.removeEventListener("resize", calculateSizes);
       observer.disconnect();
     };
-  }, [snapPoints, enable]);
+  }, [snapPoints, direction, enable]);
 
   return sizes;
 }

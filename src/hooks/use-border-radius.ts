@@ -4,9 +4,13 @@ import {
   useTransform,
 } from "motion/react";
 import { RefObject, useEffect } from "react";
+import { Direction } from "@/types";
+import { getAxis } from "@/utils/get-axis";
+import { match } from "@/utils/match";
 
 type UseBorderRadiusProps = {
   elementRef: RefObject<HTMLElement | null>;
+  direction: Direction;
   inputRange: [number, number];
   outputRange: [number, number];
   onChange: (radius: number) => void;
@@ -14,14 +18,17 @@ type UseBorderRadiusProps = {
 };
 
 export function useBorderRadius(props: UseBorderRadiusProps) {
-  const { elementRef, inputRange, outputRange, onChange, enable } = props;
+  const { elementRef, direction, inputRange, outputRange, onChange, enable } =
+    props;
 
-  const motionHeight = useMotionValue(0);
+  const motionSize = useMotionValue(0);
 
-  const radios = useTransform(motionHeight, inputRange, outputRange);
+  const radios = useTransform(motionSize, inputRange, outputRange);
 
   useEffect(() => {
     if (!enable) return;
+
+    const axis = getAxis(direction);
 
     onChange(radios.get());
 
@@ -29,7 +36,12 @@ export function useBorderRadius(props: UseBorderRadiusProps) {
       entries.forEach((entry) => {
         if (entry.target === elementRef.current) {
           const rect = entry.target.getBoundingClientRect();
-          motionHeight.set(rect.height);
+          motionSize.set(
+            match(axis, {
+              x: rect.width,
+              y: rect.height,
+            }),
+          );
         }
       });
     });

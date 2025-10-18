@@ -143,6 +143,8 @@ const comments = [
 export default function MyDrawer() {
   const [open, setOpen] = useState(false);
 
+  const [to, setTo] = useState(0);
+
   return (
     <>
       <button className="p-4 text-white" onClick={() => setOpen(true)}>
@@ -153,10 +155,12 @@ export default function MyDrawer() {
           <Dialog open onClose={setOpen} className="fixed z-50">
             <DialogPanel
               as={Drawer}
-              className="z-2 w-full border lg:max-w-96 bg-white dark:bg-[#1F1F1FFF]"
+              className="z-2 w-full lg:max-w-[400px] border bg-white dark:bg-[#1F1F1FFF]"
               defaultOpen={open}
               onOpenChange={setOpen}
-              snapPoints={["400px", "auto"]}
+              snapPoints={["400px", "100%"]}
+              direction="bottom"
+              offset={0}
             >
               <DrawerHeader className="flex items-center justify-between p-4 select-none border-b dark:border-neutral-800">
                 <div className="flex items-center gap-3">
@@ -188,7 +192,7 @@ export default function MyDrawer() {
                 </button>
               </DrawerHeader>
               <DrawerBody className="p-4 space-y-4 select-none">
-                {comments.map((comment, index) => (
+                {comments.slice(0, to).map((comment, index) => (
                   <div key={index} className="flex items-start gap-3">
                     <div className="w-8 h-8 bg-neutral-200 dark:bg-neutral-700 rounded-full flex-shrink-0" />
                     <div className="flex-1">
@@ -209,6 +213,24 @@ export default function MyDrawer() {
                     </div>
                   </div>
                 ))}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setTo((prev) => prev - 2);
+                    }}
+                    className="text-blue-500 dark:text-blue-400 font-semibold hover:text-blue-600 dark:hover:text-blue-300"
+                  >
+                    Less
+                  </button>
+                  <button
+                    onClick={() => {
+                      setTo((prev) => prev + 2);
+                    }}
+                    className="text-blue-500 dark:text-blue-400 font-semibold hover:text-blue-600 dark:hover:text-blue-300"
+                  >
+                    More
+                  </button>
+                </div>
               </DrawerBody>
               <DrawerActions className="flex items-center gap-3 border-t dark:border-neutral-800 p-4">
                 <div className="w-8 h-8 bg-neutral-200 dark:bg-neutral-700 rounded-full flex-shrink-0" />

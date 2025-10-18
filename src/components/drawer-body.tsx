@@ -1,5 +1,12 @@
 import { Props } from "@/utils/render/types";
-import { ElementType, Ref, useCallback, useMemo, useRef } from "react";
+import {
+  CSSProperties,
+  ElementType,
+  Ref,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import { useRender } from "@/utils/render";
 import { DrawerRenderPropArg } from "@/types";
 import { useDrawerContext } from "@/context";
@@ -16,6 +23,8 @@ import { clamp } from "@/utils/clamp";
 import { set } from "@/utils/set";
 import { getMaxScrollTop } from "@/utils/scroll";
 import { ValueAnimationTransition } from "motion";
+import { match } from "@/utils/match";
+import { getAxis } from "@/utils/get-axis";
 
 const DEFAULT_DRAWER_BODY_TAG = "div";
 
@@ -33,7 +42,7 @@ export function DrawerBody<
 >(props: DrawerBodyProps<TTag>) {
   const { ...theirProps } = props;
 
-  const { bodyRef, drawerRef, maxSize } = useDrawerContext();
+  const { bodyRef, drawerRef, maxSize, direction } = useDrawerContext();
   const ref = useRef<HTMLElement | null>(null);
   const tracked = useRef({
     initialScrollTop: null as number | null,
@@ -195,14 +204,31 @@ export function DrawerBody<
 
   const render = useRender();
 
+  const directionStyles = useMemo<CSSProperties>(() => {
+    const axis = getAxis(direction);
+    return match(axis, {
+      x: {
+        display: "flex",
+        flexDirection: "row",
+        justifyContent: "flex-start",
+      },
+      y: {
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "flex-start",
+      },
+    });
+  }, [direction]);
+
   return (
     <div
       ref={syncRefs(bodyRef, drag.ref)}
       style={{
         position: "relative",
         touchAction: "none",
-        overflowY: "auto",
+        overflow: "auto",
         flexGrow: 1,
+        ...directionStyles,
       }}
     >
       {render({

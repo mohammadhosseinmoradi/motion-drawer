@@ -1,4 +1,5 @@
 import { createContext, RefObject, use } from "react";
+import { Direction } from "@/types";
 
 export const DrawerContext = createContext<{
   drawerRef: RefObject<HTMLElement | null>;
@@ -6,6 +7,7 @@ export const DrawerContext = createContext<{
   bodyRef: RefObject<HTMLElement | null>;
   actionsRef: RefObject<HTMLElement | null>;
   maxSize: number;
+  direction: Direction;
 } | null>(null);
 
 export function useDrawerContext() {
