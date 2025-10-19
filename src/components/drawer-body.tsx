@@ -33,7 +33,8 @@ export function DrawerBody<
 >(props: DrawerBodyProps<TTag>) {
   const { ...theirProps } = props;
 
-  const { bodyRef, drawerRef, maxSize } = useDrawerContext();
+  const { bodyRef, drawerRef, getMaxSize } = useDrawerContext();
+
   const ref = useRef<HTMLElement | null>(null);
   const tracked = useRef({
     initialScrollTop: null as number | null,
@@ -60,7 +61,7 @@ export function DrawerBody<
       tracked.current.initialScrollTop = bodyRef.current!.scrollTop;
       tracked.current.allowScroll = getIsDrawerMaxSize(
         drawerRef.current!,
-        maxSize,
+        getMaxSize(),
       );
     },
 
@@ -76,7 +77,10 @@ export function DrawerBody<
         motionScrollTop.set(scrollTop);
       }
 
-      const isDrawerMaxSize = getIsDrawerMaxSize(drawerRef.current!, maxSize);
+      const isDrawerMaxSize = getIsDrawerMaxSize(
+        drawerRef.current!,
+        getMaxSize(),
+      );
 
       // Scroll down
       if (

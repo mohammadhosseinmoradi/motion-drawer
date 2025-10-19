@@ -6,14 +6,12 @@ import React, {
   useEffect,
   useMemo,
   useRef,
-  useState,
 } from "react";
 import { DrawerRenderPropArg, SnapPoint } from "@/types";
 import { useRender } from "@/utils/render";
 import { useDrag } from "@/hooks/use-drag";
 import { syncRefs } from "@/utils/sync-refs";
 import { DrawerContext } from "@/context";
-import { useSizes } from "@/hooks/use-sizes";
 import {
   animate,
   DOMKeyframesDefinition,
@@ -28,9 +26,8 @@ import { useAnimateOut } from "@/hooks/use-animate-out";
 import { set } from "@/utils/set";
 import { clamp } from "@/utils/clamp";
 import { rubberbandIfOutOfBounds } from "@/utils/rubberband-if-out-of-bounds";
-import { useDisposables } from "@/hooks/use-disposables";
-import { useWindowEvent } from "@/hooks/use-window-event";
 import { getNearestSnapPoint, resolveSnapPoint } from "@/utils/snap-point";
+import { getComputedSize, getSize } from "@/utils/size";
 
 const DEFAULT_DRAWER_TAG = "div";
 
@@ -85,13 +82,6 @@ export type DrawerProps<TTag extends ElementType> = Props<
      */
     padding?: number;
     /**
-     * The minimum size of the drawer.
-     * When dragging, the drawer cannot be smaller than this value.
-     *
-     * @default 0
-     */
-    minSize?: number;
-    /**
      * Whether to close the drawer when dragging.
      *
      * `true`, the drawer will close when dragging down from the first snap point.
@@ -118,7 +108,6 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
     style,
     offset = 0,
     padding = 0,
-    minSize = 0,
     closeFromFirstSnapPoint = false,
     ...theirProps
   } = props;
@@ -128,12 +117,13 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
   const headerRef = useRef<HTMLElement | null>(null);
   const bodyRef = useRef<HTMLElement | null>(null);
   const actionsRef = useRef<HTMLElement | null>(null);
-  const [animatedIn, setAnimatedIn] = useState(false);
 
   const ref = useRef<HTMLElement | null>(null);
   const tracked = useRef({
     initialSize: null as number | null,
     isDragging: false,
+    minSize: 0,
+    maxSize: 0,
   });
   const releaseAnimationControl =
     useRef<AnimationPlaybackControlsWithThen | null>(null);
@@ -150,21 +140,29 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
     defaultOpen,
   );
 
-  const { maxSize, autoSize } = useSizes({
-    drawerRef,
-    headerRef,
-    bodyRef,
-    actionsRef,
-    snapPoints,
-    offset,
-    padding,
-    enable: open,
-  });
-
   const getDrawerSize = useCallback(() => {
-    const rect = drawerRef.current!.getBoundingClientRect();
-    return rect.height;
+    return getSize(drawerRef.current!);
   }, []);
+
+  const getMaxSize = useCallback(() => {
+    return Math.min(
+      getComputedSize({
+        element: drawerRef.current!,
+        height: "auto",
+      }).height,
+      window.innerHeight - offset - padding,
+    );
+  }, [offset, padding]);
+
+  const getMinSize = useCallback(() => {
+    return Math.min(
+      getComputedSize({
+        element: drawerRef.current!,
+        height: snapPoints[0],
+      }).height,
+      window.innerHeight - offset - padding,
+    );
+  }, [snapPoints, offset, padding]);
 
   const getKeyframes = useCallback(
     (
@@ -172,11 +170,17 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
       minSize: number,
       maxSize: number,
     ): DOMKeyframesDefinition => {
+      const sizeMaxClamped = clamp(size, -Infinity, maxSize);
+
       return {
         // Animate height until minSize
-        height: rubberbandIfOutOfBounds(size, minSize, maxSize),
+        height: clamp(
+          rubberbandIfOutOfBounds(size, minSize, maxSize),
+          minSize,
+          Infinity,
+        ),
         // Animate y if size is less than minSize
-        y: -(size < minSize ? size - minSize : 0),
+        y: -(sizeMaxClamped < minSize ? sizeMaxClamped - minSize : 0),
       };
     },
     [],
@@ -207,14 +211,17 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
   const drag = useDrag(
     {
       onInit() {
-        tracked.current.initialSize = getDrawerSize();
+        tracked.current.initialSize = getDrawerSize().height;
         tracked.current.isDragging = true;
+        tracked.current.minSize = getMinSize();
+        tracked.current.maxSize = getMaxSize();
       },
 
       onMove({ movement }) {
         let size = tracked.current.initialSize! + -movement[1];
-        let sizeConstrained = size;
-        if (size > maxSize) sizeConstrained = maxSize;
+        let maxSize = tracked.current.maxSize;
+        const minSize = tracked.current.minSize;
+        maxSize = clamp(maxSize, minSize, maxSize);
 
         if (releaseAnimationControl.current) {
           releaseAnimationControl.current.stop();
@@ -224,10 +231,7 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
         animate(
           drawerRef.current!,
           {
-            // Animate height until minSize
-            height: rubberbandIfOutOfBounds(size, minSize, maxSize),
-            // Animate y if size is less than minSize
-            y: -(sizeConstrained < minSize ? sizeConstrained - minSize : 0),
+            ...getKeyframes(size, minSize, maxSize),
             maxHeight: "unset",
           },
           {
@@ -238,8 +242,12 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
       },
 
       onRelease({ velocity, movement, direction, prevTimestamp, timestamp }) {
-        let size = getDrawerSize();
+        let size = getDrawerSize().height;
         size += velocity[1] * VELOCITY_MULTIPLIER * -direction[1];
+        let maxSize = tracked.current.maxSize;
+        const minSize = tracked.current.minSize;
+        maxSize = clamp(maxSize, minSize, maxSize);
+
         size = clamp(size, 0, maxSize);
 
         const isPrevSnapPointFirst = snapPoints?.[0] === snapPoint;
@@ -249,12 +257,13 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
         const isPaused = timestamp - prevTimestamp > 200;
         const closePoint = "0px";
         const isNearestClosePoint =
-          getNearestSnapPoint(
-            [closePoint, snapPoints[0]],
+          getNearestSnapPoint({
+            drawer: drawerRef.current!,
+            snapPoints: [closePoint, snapPoints[0]],
             size,
-            autoSize,
-            maxSize,
-          ) === closePoint;
+            offset,
+            padding,
+          }) === closePoint;
 
         const shouldClose =
           (closeFromFirstSnapPoint ? isPrevSnapPointFirst : true) &&
@@ -265,29 +274,30 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
           isNearestClosePoint;
 
         if (shouldClose) {
-          onOpenChange?.(false);
+          animateOut(-(padding + offset), minSize, maxSize, () => {
+            onOpenChange?.(false);
+            safeToRemove?.();
+          });
         } else {
-          const nearestSnapPoint = getNearestSnapPoint(
+          const nearestSnapPoint = getNearestSnapPoint({
+            drawer: drawerRef.current!,
             snapPoints,
             size,
-            autoSize,
-            maxSize,
-          );
-          size = resolveSnapPoint(nearestSnapPoint, autoSize, maxSize);
+            offset,
+            padding,
+          });
+          size = resolveSnapPoint({
+            drawer: drawerRef.current!,
+            snapPoint: nearestSnapPoint,
+            offset,
+            padding,
+          });
           onSnapPointChange?.(nearestSnapPoint);
 
           let isCompleted = false;
           releaseAnimationControl.current = animate(
             drawerRef.current!,
-            {
-              ...(nearestSnapPoint === "auto" && autoSize < maxSize
-                ? {
-                    height: "auto",
-                    y: 0,
-                    maxHeight: maxSize + "px",
-                  }
-                : getKeyframes(size, minSize, maxSize)),
-            },
+            getKeyframes(size, minSize, maxSize),
             {
               type: "spring",
               damping: 100,
@@ -299,9 +309,13 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
                   return;
                 }
                 if (nearestSnapPoint === "auto") {
-                  set(drawerRef.current, {
-                    height: "auto",
-                    "max-height": maxSize + "px",
+                  releaseAnimationControl.current?.stop();
+                  releaseAnimationControl.current = null;
+                  requestAnimationFrame(() => {
+                    set(drawerRef.current, {
+                      height: "auto",
+                      "max-height": `calc(100dvh - ${offset}px - ${padding}px)`,
+                    });
                   });
                 }
               },
@@ -317,53 +331,26 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
     },
   );
 
-  const resizeDisposables = useDisposables();
-  useWindowEvent(animatedIn, "resize", () => {
-    resizeDisposables.dispose();
-    resizeDisposables.nextFrame(() => {
-      const size = getDrawerSize();
-      const shouldBeSize = resolveSnapPoint(snapPoint, autoSize, maxSize);
-      if (size !== shouldBeSize) {
-        animate(
-          drawerRef.current!,
-          getKeyframes(shouldBeSize, minSize, maxSize),
-          {
-            duration: 0,
-          },
-        );
-      }
-    });
-  });
-
   useBorderRadius({
-    elementRef: drawerRef,
-    inputRange: [maxSize - 50, maxSize],
-    outputRange: [borderRadius || 0, 0],
-    onChange(radius) {
-      set(drawerRef.current, {
-        "border-top-left-radius": radius + "px",
-        "border-top-right-radius": radius + "px",
-      });
-    },
+    drawerRef,
+    borderRadius: borderRadius || 0,
     enable: borderRadius !== null,
   });
 
   useAnimateIn({
     drawerRef,
-    open,
     snapPoint: snapPoint || defaultSnapPoint || "auto",
-    autoSize,
-    maxSize,
-    onAnimateEnd() {
-      setAnimatedIn(true);
-    },
-    enable: autoSize > 0,
+    offset,
+    padding,
+    enable: open,
   });
 
   useAnimateOut({
-    isClose: !open || !isPresent,
+    enable: !open || !isPresent,
     onClose() {
-      animateOut(0, minSize, maxSize, () => safeToRemove?.());
+      animateOut(-(padding + offset), getMinSize(), getMaxSize(), () =>
+        safeToRemove?.(),
+      );
     },
   });
 
@@ -405,7 +392,7 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
         headerRef,
         bodyRef,
         actionsRef,
-        maxSize,
+        getMaxSize,
       }}
     >
       {render({

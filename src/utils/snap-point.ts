@@ -1,38 +1,53 @@
 import { SnapPoint } from "@/types";
+import { getComputedSize } from "@/utils/size";
 
-export function resolveSnapPoint(
-  snapPoint: SnapPoint,
-  autoSize: number,
-  maxSize: number,
-): number {
-  if (snapPoint === "auto") return autoSize;
-  if (snapPoint.endsWith("px")) return parseInt(snapPoint);
-  if (snapPoint.endsWith("%")) {
-    return Math.round((parseInt(snapPoint) / 100) * maxSize);
+type ResolveSnapPointParams = {
+  drawer: HTMLElement;
+  snapPoint: SnapPoint;
+  offset: number;
+  padding: number;
+};
+
+export function resolveSnapPoint(params: ResolveSnapPointParams): number {
+  const { drawer, snapPoint, offset, padding } = params;
+
+  if (snapPoint.endsWith("px")) return parseFloat(snapPoint);
+  else {
+    return Math.min(
+      getComputedSize({
+        element: drawer,
+        height: snapPoint,
+      }).height,
+      window.innerHeight - offset - padding,
+    );
   }
-  return 0;
 }
 
-/**
- * Gets the nearest snap point to the current position.
- * Throws an error when snapPoints array is empty.
- * @param snapPoints - Array of snap points
- * @param position - Current position to compare against
- * @param autoSize - The automatically calculated size based on content height
- * @param maxSize - The max size of available viewport
- * @returns The nearest snap point value
- */
-export function getNearestSnapPoint(
-  snapPoints: SnapPoint[],
-  position: number,
-  autoSize: number,
-  maxSize: number,
-) {
+type GetNearestSnapPointParams = {
+  drawer: HTMLElement;
+  snapPoints: SnapPoint[];
+  size: number;
+  offset: number;
+  padding: number;
+};
+
+export function getNearestSnapPoint(params: GetNearestSnapPointParams) {
+  const { drawer, snapPoints, size, offset, padding } = params;
+
   return snapPoints.reduce((nearest, current) => {
-    const currentResolved = resolveSnapPoint(current, autoSize, maxSize);
-    const nearestResolved = resolveSnapPoint(nearest, autoSize, maxSize);
-    return Math.abs(currentResolved - position) <
-      Math.abs(nearestResolved - position)
+    const currentResolved = resolveSnapPoint({
+      drawer,
+      snapPoint: current,
+      offset,
+      padding,
+    });
+    const nearestResolved = resolveSnapPoint({
+      drawer,
+      snapPoint: nearest,
+      offset,
+      padding,
+    });
+    return Math.abs(currentResolved - size) < Math.abs(nearestResolved - size)
       ? current
       : nearest;
   });

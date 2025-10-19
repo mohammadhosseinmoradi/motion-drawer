@@ -6,37 +6,27 @@ import { resolveSnapPoint } from "@/utils/snap-point";
 
 type UseAnimateInProps = {
   drawerRef: RefObject<HTMLElement | null>;
-  open: boolean;
   snapPoint: SnapPoint;
-  autoSize: number;
-  maxSize: number;
-  onAnimateEnd: () => void;
+  offset: number;
+  padding: number;
   enable: boolean;
 };
 
 export function useAnimateIn(props: UseAnimateInProps) {
-  const {
-    drawerRef,
-    open,
-    snapPoint,
-    autoSize,
-    maxSize,
-    onAnimateEnd,
-    enable,
-  } = props;
+  const { drawerRef, snapPoint, offset, padding, enable } = props;
 
   useEffect(() => {
     if (!enable) return;
-    if (!open) return;
-    const drawer = drawerRef.current;
-    if (!drawer) return;
-    const resolvedSnapPoint = resolveSnapPoint(snapPoint, autoSize, maxSize);
-    set(drawer, {
-      height: `${resolvedSnapPoint}px`,
+    if (!drawerRef.current) return;
+
+    set(drawerRef.current, {
+      height: snapPoint,
+      "max-height": `calc(100dvh - ${offset}px - ${padding}px)`,
       transform: "translateY(100%)",
     });
+
     animate(
-      drawer,
+      drawerRef.current,
       {
         y: 0,
       },
@@ -45,10 +35,7 @@ export function useAnimateIn(props: UseAnimateInProps) {
         damping: 100,
         stiffness: 1200,
         mass: 1,
-        onComplete() {
-          onAnimateEnd();
-        },
       },
     );
-  }, [enable, open]);
+  }, [enable]);
 }

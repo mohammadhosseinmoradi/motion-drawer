@@ -1,14 +1,14 @@
 import { useEffect } from "react";
 
 type UseAnimateOutProps = {
-  isClose: boolean;
+  enable: boolean;
   onClose: () => void;
 };
 
 export function useAnimateOut(props: UseAnimateOutProps) {
-  const { isClose, onClose } = props;
+  const { enable, onClose } = props;
 
   useEffect(() => {
-    if (isClose) onClose();
-  }, [isClose]);
+    if (enable) onClose();
+  }, [enable]);
 }
