@@ -143,6 +143,8 @@ const comments = [
 export default function MyDrawer() {
   const [open, setOpen] = useState(false);
 
+  const [count, setCount] = useState(3);
+
   return (
     <>
       <button className="p-4 text-white" onClick={() => setOpen(true)}>
@@ -156,7 +158,9 @@ export default function MyDrawer() {
               className="z-2 w-full border lg:max-w-96 bg-white dark:bg-[#1F1F1FFF]"
               defaultOpen={open}
               onOpenChange={setOpen}
-              snapPoints={["400px", "auto"]}
+              snapPoints={["300px", "auto"]}
+              offset={16}
+              padding={16}
             >
               <DrawerHeader className="flex items-center justify-between p-4 select-none border-b dark:border-neutral-800">
                 <div className="flex items-center gap-3">
@@ -188,7 +192,7 @@ export default function MyDrawer() {
                 </button>
               </DrawerHeader>
               <DrawerBody className="p-4 space-y-4 select-none">
-                {comments.map((comment, index) => (
+                {comments.slice(0, count).map((comment, index) => (
                   <div key={index} className="flex items-start gap-3">
                     <div className="w-8 h-8 bg-neutral-200 dark:bg-neutral-700 rounded-full flex-shrink-0" />
                     <div className="flex-1">
@@ -209,6 +213,24 @@ export default function MyDrawer() {
                     </div>
                   </div>
                 ))}
+                <div className="mt-4 gap-2 flex">
+                  <button
+                    className="text-blue-500 dark:text-blue-400 font-semibold hover:text-blue-600 dark:hover:text-blue-300"
+                    onClick={() => {
+                      setCount((count) => count - 3);
+                    }}
+                  >
+                    Remove
+                  </button>
+                  <button
+                    className="text-blue-500 dark:text-blue-400 font-semibold hover:text-blue-600 dark:hover:text-blue-300"
+                    onClick={() => {
+                      setCount((count) => count + 3);
+                    }}
+                  >
+                    Add
+                  </button>
+                </div>
               </DrawerBody>
               <DrawerActions className="flex items-center gap-3 border-t dark:border-neutral-800 p-4">
                 <div className="w-8 h-8 bg-neutral-200 dark:bg-neutral-700 rounded-full flex-shrink-0" />
