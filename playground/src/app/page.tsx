@@ -143,7 +143,7 @@ const comments = [
 export default function MyDrawer() {
   const [open, setOpen] = useState(false);
 
-  const [count, setCount] = useState(3);
+  const [count, setCount] = useState(2);
 
   return (
     <>
@@ -158,9 +158,6 @@ export default function MyDrawer() {
               className="z-2 w-full border lg:max-w-96 bg-white dark:bg-[#1F1F1FFF]"
               defaultOpen={open}
               onOpenChange={setOpen}
-              snapPoints={["300px", "auto"]}
-              offset={16}
-              padding={16}
             >
               <DrawerHeader className="flex items-center justify-between p-4 select-none border-b dark:border-neutral-800">
                 <div className="flex items-center gap-3">
@@ -217,7 +214,7 @@ export default function MyDrawer() {
                   <button
                     className="text-blue-500 dark:text-blue-400 font-semibold hover:text-blue-600 dark:hover:text-blue-300"
                     onClick={() => {
-                      setCount((count) => count - 3);
+                      setCount((count) => count - 2);
                     }}
                   >
                     Remove
@@ -225,7 +222,7 @@ export default function MyDrawer() {
                   <button
                     className="text-blue-500 dark:text-blue-400 font-semibold hover:text-blue-600 dark:hover:text-blue-300"
                     onClick={() => {
-                      setCount((count) => count + 3);
+                      setCount((count) => count + 2);
                     }}
                   >
                     Add
