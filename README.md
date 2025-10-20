@@ -126,7 +126,6 @@ export default function MyDrawer() {
               offset={16}
               padding={16}
               borderRadius={null}
-              minSize={400}
             >
               <DrawerHeader className="flex items-center justify-between p-4 select-none border-b dark:border-neutral-800">
                 <div className="flex items-center gap-3">
