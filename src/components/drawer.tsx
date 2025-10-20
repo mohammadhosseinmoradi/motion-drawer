@@ -193,16 +193,12 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
       maxSize: number,
       onComplete: () => void,
     ) => {
-      let isComplete = false;
       animate(drawerRef.current!, getKeyframes(size, minSize, maxSize), {
         type: "spring",
         damping: 100,
         stiffness: 1200,
         mass: 1,
-        onComplete() {
-          if (isComplete) onComplete();
-          isComplete = true;
-        },
+        onComplete,
       });
     },
     [],
@@ -294,7 +290,6 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
           });
           onSnapPointChange?.(nearestSnapPoint);
 
-          let isCompleted = false;
           releaseAnimationControl.current = animate(
             drawerRef.current!,
             getKeyframes(size, minSize, maxSize),
@@ -304,10 +299,6 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
               stiffness: 1000,
               mass: 1,
               onComplete() {
-                if (!isCompleted) {
-                  isCompleted = true;
-                  return;
-                }
                 if (nearestSnapPoint === "auto") {
                   releaseAnimationControl.current?.stop();
                   releaseAnimationControl.current = null;
