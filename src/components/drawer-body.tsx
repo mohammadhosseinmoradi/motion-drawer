@@ -40,7 +40,7 @@ export function DrawerBody<
     initialScrollTop: null as number | null,
     isScrolled: false,
     allowScroll: false,
-    maxSize: 0
+    maxSize: 0,
   });
   const releaseAnimationControl =
     useRef<AnimationPlaybackControlsWithThen | null>(null);
@@ -84,9 +84,12 @@ export function DrawerBody<
         tracked.current.maxSize,
       );
 
+      const maxScrollTop = getMaxScrollTop(bodyRef.current!);
+
       // Scroll down
       if (
         isDrawerMaxSize &&
+        maxScrollTop > 0 &&
         tracked.current.initialScrollTop >= 0 &&
         movement[1] <= 0
       ) {
