@@ -7,7 +7,7 @@ import React, {
   useMemo,
   useRef,
 } from "react";
-import { DrawerRenderPropArg, SnapPoint } from "@/types";
+import { DrawerRenderPropArg } from "@/types";
 import { useRender } from "@/utils/render";
 import { useDrag } from "@/hooks/use-drag";
 import { syncRefs } from "@/utils/sync-refs";
@@ -39,27 +39,24 @@ export type DrawerProps<TTag extends ElementType> = Props<
     ref?: Ref<HTMLElement>;
     /**
      * An array of snap points that the drawer can snap to.
-     * Each snap point can be specified in one of three formats:
-     *
-     * - Pixel values (e.g. `200px`): Sets a fixed height for the drawer
-     * - Percentage values (e.g. `50%`): Sets height relative to the viewport height
-     * - `auto`: Expands drawer to fit its content, up to maximum viewport height
+     * Supports all CSS valid sizes
      *
      * Snap points can be mixed-and-matched, for example,
      * `["200px", "50%", "auto"]`
+     * `["50dvh", "calc(100vh - 3rem)"]`
      *
      * @default ["auto"]
      */
-    snapPoints?: SnapPoint[];
-    defaultSnapPoint?: SnapPoint;
+    snapPoints?: string[];
+    defaultSnapPoint?: string;
     /**
      * The controlled snap point state.
      */
-    snapPoint?: SnapPoint;
+    snapPoint?: string;
     /**
      * Event handler called when the snap point state changes.
      */
-    onSnapPointChange?: (snapPoint: SnapPoint) => void;
+    onSnapPointChange?: (snapPoint: string) => void;
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
     defaultOpen?: boolean;
@@ -144,24 +141,16 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
     return getSize(drawerRef.current!);
   }, []);
 
-  const getMaxSize = useCallback(() => {
-    return Math.min(
-      getComputedSize({
-        element: drawerRef.current!,
-        height: "auto",
-      }).height,
-      window.innerHeight - offset - padding,
-    );
-  }, [offset, padding]);
-
-  const getMinSize = useCallback(() => {
-    return Math.min(
-      getComputedSize({
-        element: drawerRef.current!,
-        height: snapPoints[0],
-      }).height,
-      window.innerHeight - offset - padding,
-    );
+  const getComputedSnapPoints = useCallback(() => {
+    return snapPoints.map((snapPoint) => {
+      return Math.min(
+        getComputedSize({
+          element: drawerRef.current!,
+          height: snapPoint,
+        }).height,
+        window.innerHeight - offset - padding,
+      );
+    });
   }, [snapPoints, offset, padding]);
 
   const getKeyframes = useCallback(
@@ -209,8 +198,9 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
       onInit() {
         tracked.current.initialSize = getDrawerSize().height;
         tracked.current.isDragging = true;
-        tracked.current.minSize = getMinSize();
-        tracked.current.maxSize = getMaxSize();
+        const computedSnapPoints = getComputedSnapPoints();
+        tracked.current.minSize = Math.min(...computedSnapPoints);
+        tracked.current.maxSize = Math.max(...computedSnapPoints);
       },
 
       onMove({ movement }) {
@@ -299,16 +289,14 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
               stiffness: 1000,
               mass: 1,
               onComplete() {
-                if (nearestSnapPoint === "auto") {
-                  releaseAnimationControl.current?.stop();
-                  releaseAnimationControl.current = null;
-                  requestAnimationFrame(() => {
-                    set(drawerRef.current, {
-                      height: "auto",
-                      "max-height": `calc(100dvh - ${offset}px - ${padding}px)`,
-                    });
+                releaseAnimationControl.current?.stop();
+                releaseAnimationControl.current = null;
+                requestAnimationFrame(() => {
+                  set(drawerRef.current, {
+                    height: nearestSnapPoint,
+                    "max-height": `calc(100dvh - ${offset}px - ${padding}px)`,
                   });
-                }
+                });
               },
             },
           );
@@ -339,9 +327,10 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
   useAnimateOut({
     enable: !open || !isPresent,
     onClose() {
-      animateOut(-(padding + offset), getMinSize(), getMaxSize(), () =>
-        safeToRemove?.(),
-      );
+      const computedSnapPoints = getComputedSnapPoints();
+      const min = Math.min(...computedSnapPoints);
+      const max = Math.max(...computedSnapPoints);
+      animateOut(-(padding + offset), min, max, () => safeToRemove?.());
     },
   });
 
@@ -383,7 +372,7 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
         headerRef,
         bodyRef,
         actionsRef,
-        getMaxSize,
+        getComputedSnapPoints,
       }}
     >
       {render({

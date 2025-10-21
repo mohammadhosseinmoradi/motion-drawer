@@ -158,6 +158,7 @@ export default function MyDrawer() {
               className="z-2 w-full border lg:max-w-96 bg-white dark:bg-[#1F1F1FFF]"
               defaultOpen={open}
               onOpenChange={setOpen}
+              snapPoints={["200px", "400px", "calc(100vh - 3rem)"]}
             >
               <DrawerHeader className="flex items-center justify-between p-4 select-none border-b dark:border-neutral-800">
                 <div className="flex items-center gap-3">

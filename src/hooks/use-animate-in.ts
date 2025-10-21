@@ -1,12 +1,10 @@
 import { RefObject, useEffect } from "react";
 import { animate } from "motion/react";
-import { SnapPoint } from "@/types";
 import { set } from "@/utils/set";
-import { resolveSnapPoint } from "@/utils/snap-point";
 
 type UseAnimateInProps = {
   drawerRef: RefObject<HTMLElement | null>;
-  snapPoint: SnapPoint;
+  snapPoint: string;
   offset: number;
   padding: number;
   enable: boolean;

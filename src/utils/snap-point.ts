@@ -1,9 +1,8 @@
-import { SnapPoint } from "@/types";
 import { getComputedSize } from "@/utils/size";
 
 type ResolveSnapPointParams = {
   drawer: HTMLElement;
-  snapPoint: SnapPoint;
+  snapPoint: string;
   offset: number;
   padding: number;
 };
@@ -25,7 +24,7 @@ export function resolveSnapPoint(params: ResolveSnapPointParams): number {
 
 type GetNearestSnapPointParams = {
   drawer: HTMLElement;
-  snapPoints: SnapPoint[];
+  snapPoints: string[];
   size: number;
   offset: number;
   padding: number;

@@ -5,7 +5,7 @@ export const DrawerContext = createContext<{
   headerRef: RefObject<HTMLElement | null>;
   bodyRef: RefObject<HTMLElement | null>;
   actionsRef: RefObject<HTMLElement | null>;
-  getMaxSize: () => number;
+  getComputedSnapPoints: () => number[];
 } | null>(null);
 
 export function useDrawerContext() {
