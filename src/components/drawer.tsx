@@ -240,7 +240,8 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
         const isBottom = direction[1] > 0;
         const isFast = velocity[1] > 0.1;
         const isMovedEnough = movement[1] > 50;
-        const isPaused = timestamp - prevTimestamp > 200;
+        const isPaused = timestamp - prevTimestamp > 300;
+
         const closePoint = "0px";
         const isNearestClosePoint =
           getNearestSnapPoint({
@@ -257,7 +258,7 @@ export function Drawer<TTag extends ElementType = typeof DEFAULT_DRAWER_TAG>(
           isFast &&
           isMovedEnough &&
           !isPaused &&
-          isNearestClosePoint;
+          (isPrevSnapPointFirst ? true : isNearestClosePoint);
 
         if (shouldClose) {
           animateOut(-(padding + offset), minSize, maxSize, () => {
